@@ -1267,13 +1267,13 @@ async def get_indian_market():
         if not result or result.get('market_cap') is None or result.get('volume') is None:
             return _json_safe({
                 'indices': {
-                    'nifty_50': {'value': 22500.00, 'change': 0.00, 'change_percent': 0.00},
-                    'sensex': {'value': 74000.00, 'change': 0.00, 'change_percent': 0.00},
-                    'bank_nifty': {'value': 48000.00, 'change': 0.00, 'change_percent': 0.00}
+                    'nifty_50': {'current': 22500.00, 'change': 0.00},
+                    'sensex': {'current': 74000.00, 'change': 0.00},
+                    'bank_nifty': {'current': 48000.00, 'change': 0.00}
                 },
-                'market_cap': '₹200T',
-                'volume': '15B',
-                'volatility_index': '12.5',
+                'market_cap': 200000000000000,  # ₹200T in actual number
+                'volume': 15000000000,  # 15B in actual number
+                'vix': 12.5,
                 'key_stocks': [
                     {'symbol': 'RELIANCE.NS', 'name': 'Reliance Industries', 'sector': 'Energy', 'price': 2500.00, 'change': 0.00},
                     {'symbol': 'TCS.NS', 'name': 'Tata Consultancy Services', 'sector': 'Technology', 'price': 3500.00, 'change': 0.00},
@@ -1293,13 +1293,13 @@ async def get_indian_market():
         # Return default Indian market data on error instead of 500
         return _json_safe({
             'indices': {
-                'nifty_50': {'value': 22500.00, 'change': 0.00, 'change_percent': 0.00},
-                'sensex': {'value': 74000.00, 'change': 0.00, 'change_percent': 0.00},
-                'bank_nifty': {'value': 48000.00, 'change': 0.00, 'change_percent': 0.00}
+                'nifty_50': {'current': 22500.00, 'change': 0.00},
+                'sensex': {'current': 74000.00, 'change': 0.00},
+                'bank_nifty': {'current': 48000.00, 'change': 0.00}
             },
-            'market_cap': '₹200T',
-            'volume': '15B',
-            'volatility_index': '12.5',
+            'market_cap': 200000000000000,  # ₹200T in actual number
+            'volume': 15000000000,  # 15B in actual number
+            'vix': 12.5,
             'key_stocks': [
                 {'symbol': 'RELIANCE.NS', 'name': 'Reliance Industries', 'sector': 'Energy', 'price': 2500.00, 'change': 0.00},
                 {'symbol': 'TCS.NS', 'name': 'Tata Consultancy Services', 'sector': 'Technology', 'price': 3500.00, 'change': 0.00},
@@ -1341,13 +1341,16 @@ async def analyze_indian_stock(
                 'name': symbol.replace('.NS', ''),
                 'sector': 'Technology',
                 'current_price': 2500.00,
-                'change': 0.00,
-                'change_percent': 0.00,
-                'market_cap': '₹10T',
-                'pe_ratio': '25.5',
-                '52w_high': 3000.00,
-                '52w_low': 2000.00,
-                'volume': '5M'
+                'performance': {'1m': 0.00},
+                'valuation': {
+                    'market_cap': 100000000000,  # ₹10T in actual number
+                    'pe_ratio': 25.5
+                },
+                'technical': {
+                    'recent_high': 3000.00,
+                    'recent_low': 2000.00
+                },
+                'volume': 5000000  # 5M in actual number
             })
         
         return _json_safe(result)
@@ -1358,13 +1361,16 @@ async def analyze_indian_stock(
             'name': symbol.replace('.NS', ''),
             'sector': 'Technology',
             'current_price': 2500.00,
-            'change': 0.00,
-            'change_percent': 0.00,
-            'market_cap': '₹10T',
-            'pe_ratio': '25.5',
-            '52w_high': 3000.00,
-            '52w_low': 2000.00,
-            'volume': '5M',
+            'performance': {'1m': 0.00},
+            'valuation': {
+                'market_cap': 100000000000,  # ₹10T in actual number
+                'pe_ratio': 25.5
+            },
+            'technical': {
+                'recent_high': 3000.00,
+                'recent_low': 2000.00
+            },
+            'volume': 5000000,  # 5M in actual number
             'error': str(e)
         })
 
