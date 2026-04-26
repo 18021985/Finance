@@ -1,7 +1,7 @@
 # Render deployment - Python dependencies
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-pydantic==2.5.0
+pydantic>=2.6.0
 yfinance==0.2.28
 pandas>=2.1.0
 numpy>=1.24.0
