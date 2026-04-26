@@ -1,10 +1,8 @@
 import axios from 'axios'
 
-// Use Render backend in production, localhost in development
+// Use Render backend in production, Render URL for local development
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000' 
-    : '/api')
+  'https://finance-1ylw.onrender.com'
 
 export interface CompositeScore {
   total_score: number
