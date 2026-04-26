@@ -1,10 +1,79 @@
 import pandas as pd
 import numpy as np
-import pandas_ta as ta
 from typing import Dict, Tuple
 
 class TechnicalIndicators:
     """Calculate technical indicators for signal generation"""
+    
+    @staticmethod
+    def calculate_rsi(series: pd.Series, length: int = 14) -> pd.Series:
+        """Calculate RSI using native pandas"""
+        delta = series.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=length).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=length).mean()
+        rs = gain / loss
+        return 100 - (100 / (1 + rs))
+    
+    @staticmethod
+    def calculate_macd(series: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> pd.DataFrame:
+        """Calculate MACD using native pandas"""
+        ema_fast = series.ewm(span=fast, adjust=False).mean()
+        ema_slow = series.ewm(span=slow, adjust=False).mean()
+        macd_line = ema_fast - ema_slow
+        signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+        histogram = macd_line - signal_line
+        return pd.DataFrame({
+            'MACD_12_26_9': macd_line,
+            'MACDs_12_26_9': signal_line,
+            'MACDh_12_26_9': histogram
+        })
+    
+    @staticmethod
+    def calculate_adx(high: pd.Series, low: pd.Series, close: pd.Series, length: int = 14) -> pd.DataFrame:
+        """Calculate ADX using native pandas"""
+        tr1 = high - low
+        tr2 = abs(high - close.shift())
+        tr3 = abs(low - close.shift())
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        
+        plus_dm = high.diff()
+        minus_dm = -low.diff()
+        plus_dm[plus_dm < 0] = 0
+        minus_dm[minus_dm < 0] = 0
+        
+        tr_smooth = tr.rolling(window=length).mean()
+        plus_dm_smooth = plus_dm.rolling(window=length).mean()
+        minus_dm_smooth = minus_dm.rolling(window=length).mean()
+        
+        plus_di = 100 * (plus_dm_smooth / tr_smooth)
+        minus_di = 100 * (minus_dm_smooth / tr_smooth)
+        
+        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
+        adx = dx.rolling(window=length).mean()
+        
+        return pd.DataFrame({'ADX_14': adx})
+    
+    @staticmethod
+    def calculate_bbands(series: pd.Series, length: int = 20, std: int = 2) -> pd.DataFrame:
+        """Calculate Bollinger Bands using native pandas"""
+        sma = series.rolling(window=length).mean()
+        rolling_std = series.rolling(window=length).std()
+        upper = sma + (rolling_std * std)
+        lower = sma - (rolling_std * std)
+        return pd.DataFrame({
+            'BBM_20_2.0': sma,
+            'BBU_20_2.0': upper,
+            'BBL_20_2.0': lower
+        })
+    
+    @staticmethod
+    def calculate_atr(high: pd.Series, low: pd.Series, close: pd.Series, length: int = 14) -> pd.Series:
+        """Calculate ATR using native pandas"""
+        tr1 = high - low
+        tr2 = abs(high - close.shift())
+        tr3 = abs(low - close.shift())
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        return tr.rolling(window=length).mean()
     
     @staticmethod
     def calculate_all(df: pd.DataFrame) -> Dict:
@@ -19,43 +88,34 @@ class TechnicalIndicators:
         indicators['sma_200'] = df['Close'].rolling(window=200).mean().iloc[-1]
         
         # RSI
-        rsi_series = ta.rsi(df['Close'], length=14)
+        rsi_series = TechnicalIndicators.calculate_rsi(df['Close'], length=14)
         indicators['rsi'] = rsi_series.iloc[-1] if not rsi_series.empty else 50
         
         # MACD
-        macd = ta.macd(df['Close'], fast=12, slow=26, signal=9)
+        macd = TechnicalIndicators.calculate_macd(df['Close'], fast=12, slow=26, signal=9)
         if macd is not None and not macd.empty:
             indicators['macd'] = macd['MACD_12_26_9'].iloc[-1]
             indicators['macd_signal'] = macd['MACDs_12_26_9'].iloc[-1]
             indicators['macd_histogram'] = macd['MACDh_12_26_9'].iloc[-1]
         
         # ADX (Trend strength)
-        adx = ta.adx(df['High'], df['Low'], df['Close'], length=14)
+        adx = TechnicalIndicators.calculate_adx(df['High'], df['Low'], df['Close'], length=14)
         if adx is not None and not adx.empty:
             indicators['adx'] = adx['ADX_14'].iloc[-1]
         
         # Bollinger Bands
-        bb = ta.bbands(df['Close'], length=20, std=2)
+        bb = TechnicalIndicators.calculate_bbands(df['Close'], length=20, std=2)
         if bb is not None and not bb.empty:
-            # Map columns dynamically based on what pandas-ta returns
-            bb_cols = bb.columns.tolist()
-            if 'BBL_20_2.0' in bb_cols:
-                indicators['bb_lower'] = bb['BBL_20_2.0'].iloc[-1]
-                indicators['bb_middle'] = bb['BBM_20_2.0'].iloc[-1]
-                indicators['bb_upper'] = bb['BBU_20_2.0'].iloc[-1]
-            else:
-                # Fallback: use first three columns
-                if len(bb_cols) >= 3:
-                    indicators['bb_lower'] = bb[bb_cols[0]].iloc[-1]
-                    indicators['bb_middle'] = bb[bb_cols[1]].iloc[-1]
-                    indicators['bb_upper'] = bb[bb_cols[2]].iloc[-1]
+            indicators['bb_lower'] = bb['BBL_20_2.0'].iloc[-1]
+            indicators['bb_middle'] = bb['BBM_20_2.0'].iloc[-1]
+            indicators['bb_upper'] = bb['BBU_20_2.0'].iloc[-1]
         
         # Support and Resistance (using recent highs/lows)
         indicators['recent_high'] = df['High'].rolling(window=20).max().iloc[-1]
         indicators['recent_low'] = df['Low'].rolling(window=20).min().iloc[-1]
         
         # Volatility (ATR)
-        atr = ta.atr(df['High'], df['Low'], df['Close'], length=14)
+        atr = TechnicalIndicators.calculate_atr(df['High'], df['Low'], df['Close'], length=14)
         if atr is not None and not atr.empty:
             indicators['atr'] = atr.iloc[-1]
         
