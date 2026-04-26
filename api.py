@@ -543,15 +543,66 @@ async def get_composite_intelligence(symbol: str):
             # serve stale cache to avoid UI spam
             if cached:
                 return _json_safe(cached[1])
-            raise HTTPException(status_code=504, detail="Request timeout - intelligence computation took too long")
+            # Return default response instead of 504
+            return _json_safe({
+                'composite_score': {
+                    'total_score': 50,
+                    'technical_score': 50,
+                    'momentum_score': 50,
+                    'macro_score': 50,
+                    'fundamental_score': 50,
+                    'ml_score': 50,
+                    'ml_probability': 50
+                },
+                'insight': f'Data temporarily unavailable for {symbol}. Please try again later.',
+                'ml_prediction': {
+                    'direction': 'neutral',
+                    'confidence': 0.5
+                },
+                'error': 'timeout'
+            })
         if 'error' in result:
-            raise HTTPException(status_code=500, detail=result['error'])
+            # Return result with error instead of 500
+            return _json_safe({
+                'composite_score': {
+                    'total_score': 50,
+                    'technical_score': 50,
+                    'momentum_score': 50,
+                    'macro_score': 50,
+                    'fundamental_score': 50,
+                    'ml_score': 50,
+                    'ml_probability': 50
+                },
+                'insight': f'Unable to fetch data for {symbol}: {result.get("error", "Unknown error")}',
+                'ml_prediction': {
+                    'direction': 'neutral',
+                    'confidence': 0.5
+                },
+                'error': result.get('error')
+            })
         _intelligence_cache[symbol] = (now, result)
         return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return default response instead of 500
+        return _json_safe({
+            'composite_score': {
+                'total_score': 50,
+                'technical_score': 50,
+                'momentum_score': 50,
+                'macro_score': 50,
+                'fundamental_score': 50,
+                'ml_score': 50,
+                'ml_probability': 50
+            },
+            'insight': f'Server error processing {symbol}: {str(e)}',
+            'ml_prediction': {
+                'direction': 'neutral',
+                'confidence': 0.5
+            },
+            'error': str(e)
+        })
 
 @app.get("/available-companies")
 async def get_available_companies(
