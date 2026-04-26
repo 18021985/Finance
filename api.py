@@ -554,7 +554,12 @@ async def get_composite_intelligence(symbol: str):
                     'ml_score': 50,
                     'ml_probability': 50
                 },
-                'insight': f'Data temporarily unavailable for {symbol}. Please try again later.',
+                'insight': {
+                    'assessment': 'Data temporarily unavailable',
+                    'strategic_consideration': f'Unable to fetch real-time data for {symbol}. Please try again later.',
+                    'drivers': ['Data unavailable'],
+                    'risks': ['Service timeout']
+                },
                 'ml_prediction': {
                     'direction': 'neutral',
                     'confidence': 0.5
@@ -573,7 +578,12 @@ async def get_composite_intelligence(symbol: str):
                     'ml_score': 50,
                     'ml_probability': 50
                 },
-                'insight': f'Unable to fetch data for {symbol}: {result.get("error", "Unknown error")}',
+                'insight': {
+                    'assessment': 'Data fetch error',
+                    'strategic_consideration': f'Unable to fetch data for {symbol}: {result.get("error", "Unknown error")}',
+                    'drivers': ['Data unavailable'],
+                    'risks': [result.get('error', 'Unknown error')]
+                },
                 'ml_prediction': {
                     'direction': 'neutral',
                     'confidence': 0.5
@@ -596,7 +606,12 @@ async def get_composite_intelligence(symbol: str):
                 'ml_score': 50,
                 'ml_probability': 50
             },
-            'insight': f'Server error processing {symbol}: {str(e)}',
+            'insight': {
+                'assessment': 'Server error',
+                'strategic_consideration': f'Server error processing {symbol}: {str(e)}',
+                'drivers': ['Data unavailable'],
+                'risks': [str(e)]
+            },
             'ml_prediction': {
                 'direction': 'neutral',
                 'confidence': 0.5
