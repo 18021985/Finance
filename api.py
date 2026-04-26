@@ -1262,32 +1262,6 @@ async def get_indian_market():
     """
     try:
         result = analyzer.indian_analyzer.get_indian_market_overview()
-        
-        # Check if result has None/missing values, use fallback if so
-        if not result or result.get('market_cap') is None or result.get('volume') is None:
-            return _json_safe({
-                'indices': {
-                    'nifty_50': {'current': 22500.00, 'change': 0.00},
-                    'sensex': {'current': 74000.00, 'change': 0.00},
-                    'bank_nifty': {'current': 48000.00, 'change': 0.00}
-                },
-                'market_cap': 200000000000000,  # ₹200T in actual number
-                'volume': 15000000000,  # 15B in actual number
-                'vix': 12.5,
-                'key_stocks': [
-                    {'symbol': 'RELIANCE.NS', 'name': 'Reliance Industries', 'sector': 'Energy', 'price': 2500.00, 'change': 0.00},
-                    {'symbol': 'TCS.NS', 'name': 'Tata Consultancy Services', 'sector': 'Technology', 'price': 3500.00, 'change': 0.00},
-                    {'symbol': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'sector': 'Banking', 'price': 1600.00, 'change': 0.00},
-                    {'symbol': 'INFY.NS', 'name': 'Infosys', 'sector': 'Technology', 'price': 1400.00, 'change': 0.00},
-                    {'symbol': 'ICICIBANK.NS', 'name': 'ICICI Bank', 'sector': 'Banking', 'price': 1000.00, 'change': 0.00}
-                ],
-                'sector_performance': {
-                    'Technology': {'change': 0.00, 'volume': 'N/A'},
-                    'Banking': {'change': 0.00, 'volume': 'N/A'},
-                    'Energy': {'change': 0.00, 'volume': 'N/A'}
-                }
-            })
-        
         return _json_safe(result)
     except Exception as e:
         # Return default Indian market data on error instead of 500
@@ -1333,26 +1307,6 @@ async def analyze_indian_stock(
             result = analyzer.indian_analyzer.analyze_indian_stock(symbol, period=period)
         except TypeError:
             result = analyzer.indian_analyzer.analyze_indian_stock(symbol)
-        
-        # Check if result has None/missing values, use fallback if so
-        if not result or result.get('current_price') is None or result.get('market_cap') is None:
-            return _json_safe({
-                'symbol': symbol,
-                'name': symbol.replace('.NS', ''),
-                'sector': 'Technology',
-                'current_price': 2500.00,
-                'performance': {'1m': 0.00},
-                'valuation': {
-                    'market_cap': 100000000000,  # ₹10T in actual number
-                    'pe_ratio': 25.5
-                },
-                'technical': {
-                    'recent_high': 3000.00,
-                    'recent_low': 2000.00
-                },
-                'volume': 5000000  # 5M in actual number
-            })
-        
         return _json_safe(result)
     except Exception as e:
         # Return default Indian stock data on error instead of 500
