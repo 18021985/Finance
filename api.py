@@ -1264,7 +1264,26 @@ async def get_indian_market():
         result = analyzer.indian_analyzer.get_indian_market_overview()
         return _json_safe(result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return default Indian market data on error instead of 500
+        return _json_safe({
+            'indices': {
+                'nifty_50': {'value': 22500.00, 'change': 0.00, 'change_percent': 0.00},
+                'sensex': {'value': 74000.00, 'change': 0.00, 'change_percent': 0.00},
+                'bank_nifty': {'value': 48000.00, 'change': 0.00, 'change_percent': 0.00}
+            },
+            'market_cap': '₹N/A',
+            'volume': 'N/A',
+            'volatility_index': 'N/A',
+            'key_stocks': [
+                {'symbol': 'RELIANCE.NS', 'name': 'Reliance Industries', 'sector': 'Energy', 'price': 0.00, 'change': 0.00},
+                {'symbol': 'TCS.NS', 'name': 'Tata Consultancy Services', 'sector': 'Technology', 'price': 0.00, 'change': 0.00},
+                {'symbol': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'sector': 'Banking', 'price': 0.00, 'change': 0.00},
+                {'symbol': 'INFY.NS', 'name': 'Infosys', 'sector': 'Technology', 'price': 0.00, 'change': 0.00},
+                {'symbol': 'ICICIBANK.NS', 'name': 'ICICI Bank', 'sector': 'Banking', 'price': 0.00, 'change': 0.00}
+            ],
+            'sector_performance': {},
+            'error': str(e)
+        })
 
 @app.get("/indian-market/{symbol}")
 async def analyze_indian_stock(
@@ -1286,7 +1305,21 @@ async def analyze_indian_stock(
             result = analyzer.indian_analyzer.analyze_indian_stock(symbol)
         return _json_safe(result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return default Indian stock data on error instead of 500
+        return _json_safe({
+            'symbol': symbol,
+            'name': symbol.replace('.NS', ''),
+            'sector': 'N/A',
+            'current_price': 0.00,
+            'change': 0.00,
+            'change_percent': 0.00,
+            'market_cap': 'N/A',
+            'pe_ratio': 'N/A',
+            '52w_high': 0.00,
+            '52w_low': 0.00,
+            'volume': 'N/A',
+            'error': str(e)
+        })
 
 @app.get("/historical/{symbol}")
 async def get_historical_data(symbol: str, period: str = '1y'):
