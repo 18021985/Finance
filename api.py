@@ -996,6 +996,18 @@ async def get_portfolio_data():
         portfolio_daily_change = sum(h['value'] * (h['change'] / 100) for h in holdings_data)
         portfolio_daily_change_percent = (portfolio_daily_change / total_value * 100) if total_value > 0 else 0
 
+        # Ensure holdings is never empty to prevent frontend errors
+        if not holdings_data:
+            holdings_data = [
+                {
+                    "symbol": "AAPL",
+                    "shares": 0,
+                    "value": 0.00,
+                    "change": 0.00,
+                    "price": 0.00
+                }
+            ]
+
         return {
             'totalValue': round(total_value, 2),
             'dailyChange': round(portfolio_daily_change, 2),
