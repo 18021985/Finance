@@ -1,0 +1,6 @@
+{
+  "risk_tolerance": "moderate",
+  "investment_horizon": "long_term",
+  "markets": ["India", "US"],
+  "capital": 100000
+}

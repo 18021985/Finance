@@ -1,0 +1,20 @@
+# Local Netlify folder
+.netlify
+
+# Node modules
+frontend/node_modules
+
+# Next.js build cache
+frontend/.next
+
+# Python cache
+__pycache__
+*.pyc
+.venv
+
+# Environment variables
+.env
+
+# IDE
+.vscode
+.idea
