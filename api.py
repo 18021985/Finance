@@ -10,9 +10,12 @@ import math
 import asyncio
 import os
 import time
+import logging
 from news_events import aggregate_effective_sentiment
 from performance_tracker import PerformanceTracker
 from auto_learning_store import AutoLearningStore
+
+logger = logging.getLogger(__name__)
 
 _APP_STARTED_AT = time.time()
 

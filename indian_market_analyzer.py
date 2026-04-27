@@ -170,6 +170,10 @@ class IndianMarketAnalyzer:
         
         # Determine market sentiment
         nifty_change = overview['indices'].get('NIFTY 50', {}).get('change', 0)
+        try:
+            nifty_change = float(nifty_change) if nifty_change else 0
+        except (ValueError, TypeError):
+            nifty_change = 0
         if nifty_change > 2:
             overview['market_sentiment'] = 'bullish'
         elif nifty_change < -2:
