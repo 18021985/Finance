@@ -84,43 +84,43 @@ class TechnicalIndicators:
         indicators = {}
         
         # Moving Averages
-        indicators['sma_50'] = df['Close'].rolling(window=50).mean().iloc[-1]
-        indicators['sma_200'] = df['Close'].rolling(window=200).mean().iloc[-1]
+        indicators['sma_50'] = float(df['Close'].rolling(window=50).mean().iloc[-1]) if not df.empty else 0
+        indicators['sma_200'] = float(df['Close'].rolling(window=200).mean().iloc[-1]) if not df.empty else 0
         
         # RSI
         rsi_series = TechnicalIndicators.calculate_rsi(df['Close'], length=14)
-        indicators['rsi'] = rsi_series.iloc[-1] if not rsi_series.empty else 50
+        indicators['rsi'] = float(rsi_series.iloc[-1]) if not rsi_series.empty else 50.0
         
         # MACD
         macd = TechnicalIndicators.calculate_macd(df['Close'], fast=12, slow=26, signal=9)
         if macd is not None and not macd.empty:
-            indicators['macd'] = macd['MACD_12_26_9'].iloc[-1]
-            indicators['macd_signal'] = macd['MACDs_12_26_9'].iloc[-1]
-            indicators['macd_histogram'] = macd['MACDh_12_26_9'].iloc[-1]
+            indicators['macd'] = float(macd['MACD_12_26_9'].iloc[-1])
+            indicators['macd_signal'] = float(macd['MACDs_12_26_9'].iloc[-1])
+            indicators['macd_histogram'] = float(macd['MACDh_12_26_9'].iloc[-1])
         
         # ADX (Trend strength)
         adx = TechnicalIndicators.calculate_adx(df['High'], df['Low'], df['Close'], length=14)
         if adx is not None and not adx.empty:
-            indicators['adx'] = adx['ADX_14'].iloc[-1]
+            indicators['adx'] = float(adx['ADX_14'].iloc[-1])
         
         # Bollinger Bands
         bb = TechnicalIndicators.calculate_bbands(df['Close'], length=20, std=2)
         if bb is not None and not bb.empty:
-            indicators['bb_lower'] = bb['BBL_20_2.0'].iloc[-1]
-            indicators['bb_middle'] = bb['BBM_20_2.0'].iloc[-1]
-            indicators['bb_upper'] = bb['BBU_20_2.0'].iloc[-1]
+            indicators['bb_lower'] = float(bb['BBL_20_2.0'].iloc[-1])
+            indicators['bb_middle'] = float(bb['BBM_20_2.0'].iloc[-1])
+            indicators['bb_upper'] = float(bb['BBU_20_2.0'].iloc[-1])
         
         # Support and Resistance (using recent highs/lows)
-        indicators['recent_high'] = df['High'].rolling(window=20).max().iloc[-1]
-        indicators['recent_low'] = df['Low'].rolling(window=20).min().iloc[-1]
+        indicators['recent_high'] = float(df['High'].rolling(window=20).max().iloc[-1]) if not df.empty else 0
+        indicators['recent_low'] = float(df['Low'].rolling(window=20).min().iloc[-1]) if not df.empty else 0
         
         # Volatility (ATR)
         atr = TechnicalIndicators.calculate_atr(df['High'], df['Low'], df['Close'], length=14)
         if atr is not None and not atr.empty:
-            indicators['atr'] = atr.iloc[-1]
+            indicators['atr'] = float(atr.iloc[-1])
         
         # Current price
-        indicators['current_price'] = df['Close'].iloc[-1]
+        indicators['current_price'] = float(df['Close'].iloc[-1]) if not df.empty else 0
         
         return indicators
     

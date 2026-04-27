@@ -168,6 +168,17 @@ class IndianMarketAnalyzer:
         overview['volume'] = 15000000000  # 15B fallback
         logger.info("Using fallback market cap and volume")
         
+        # Add fallback sectors data
+        overview['sectors'] = {
+            'Technology': {'change': 0.00, 'volume': 'N/A'},
+            'Banking': {'change': 0.00, 'volume': 'N/A'},
+            'Energy': {'change': 0.00, 'volume': 'N/A'},
+            'FMCG': {'change': 0.00, 'volume': 'N/A'},
+            'Telecom': {'change': 0.00, 'volume': 'N/A'},
+            'Infrastructure': {'change': 0.00, 'volume': 'N/A'}
+        }
+        logger.info("Using fallback sectors data")
+        
         # Determine market sentiment
         nifty_change = overview['indices'].get('NIFTY 50', {}).get('change', 0)
         try:
@@ -412,16 +423,16 @@ class IndianMarketAnalyzer:
                 'symbol': symbol,
                 'name': symbol.replace('.NS', ''),  # Simplified name since we avoid info
                 'exchange': 'NSE' if '.NS' in symbol else 'BSE',
-                'current_price': hist['Close'].iloc[-1],
+                'current_price': float(hist['Close'].iloc[-1]) if not hist.empty else 0,
                 'currency': 'INR',
                 
                 # Price performance
                 'performance': {
-                    '1d': (hist['Close'].iloc[-1] / hist['Close'].iloc[-2] - 1) * 100 if len(hist) > 1 else 0,
-                    '1w': (hist['Close'].iloc[-1] / hist['Close'].iloc[-6] - 1) * 100 if len(hist) > 5 else 0,
-                    '1m': (hist['Close'].iloc[-1] / hist['Close'].iloc[-21] - 1) * 100 if len(hist) > 20 else 0,
-                    '3m': (hist['Close'].iloc[-1] / hist['Close'].iloc[-63] - 1) * 100 if len(hist) > 62 else 0,
-                    '1y': (hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100 if len(hist) > 0 else 0,
+                    '1d': float((hist['Close'].iloc[-1] / hist['Close'].iloc[-2] - 1) * 100) if len(hist) > 1 else 0.0,
+                    '1w': float((hist['Close'].iloc[-1] / hist['Close'].iloc[-6] - 1) * 100) if len(hist) > 5 else 0.0,
+                    '1m': float((hist['Close'].iloc[-1] / hist['Close'].iloc[-21] - 1) * 100) if len(hist) > 20 else 0.0,
+                    '3m': float((hist['Close'].iloc[-1] / hist['Close'].iloc[-63] - 1) * 100) if len(hist) > 62 else 0.0,
+                    '1y': float((hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100) if len(hist) > 0 else 0.0,
                 },
                 
                 # Valuation metrics - simplified to avoid ticker.info
@@ -513,9 +524,9 @@ class IndianMarketAnalyzer:
         indicators = {}
         
         # Moving averages
-        indicators['sma_20'] = hist['Close'].rolling(window=20).mean().iloc[-1]
-        indicators['sma_50'] = hist['Close'].rolling(window=50).mean().iloc[-1]
-        indicators['sma_200'] = hist['Close'].rolling(window=200).mean().iloc[-1]
+        indicators['sma_20'] = float(hist['Close'].rolling(window=20).mean().iloc[-1]) if not hist.empty else 0
+        indicators['sma_50'] = float(hist['Close'].rolling(window=50).mean().iloc[-1]) if not hist.empty else 0
+        indicators['sma_200'] = float(hist['Close'].rolling(window=200).mean().iloc[-1]) if not hist.empty else 0
         
         # RSI
         delta = hist['Close'].diff()
@@ -532,12 +543,12 @@ class IndianMarketAnalyzer:
         # Bollinger Bands
         sma_20 = hist['Close'].rolling(window=20).mean()
         std_20 = hist['Close'].rolling(window=20).std()
-        indicators['bb_upper'] = (sma_20 + 2 * std_20).iloc[-1]
-        indicators['bb_lower'] = (sma_20 - 2 * std_20).iloc[-1]
+        indicators['bb_upper'] = float((sma_20 + 2 * std_20).iloc[-1]) if not hist.empty else 0
+        indicators['bb_lower'] = float((sma_20 - 2 * std_20).iloc[-1]) if not hist.empty else 0
         
         # Support/Resistance
-        indicators['recent_high'] = hist['High'].rolling(window=20).max().iloc[-1]
-        indicators['recent_low'] = hist['Low'].rolling(window=20).min().iloc[-1]
+        indicators['recent_high'] = float(hist['High'].rolling(window=20).max().iloc[-1]) if not hist.empty else 0
+        indicators['recent_low'] = float(hist['Low'].rolling(window=20).min().iloc[-1]) if not hist.empty else 0
         
         return indicators
     

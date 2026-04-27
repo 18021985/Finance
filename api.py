@@ -1390,10 +1390,13 @@ async def get_indian_market():
                 {'symbol': 'INFY.NS', 'name': 'Infosys', 'sector': 'Technology', 'price': 1400.00, 'change': 0.00},
                 {'symbol': 'ICICIBANK.NS', 'name': 'ICICI Bank', 'sector': 'Banking', 'price': 1000.00, 'change': 0.00}
             ],
-            'sector_performance': {
+            'sectors': {
                 'Technology': {'change': 0.00, 'volume': 'N/A'},
                 'Banking': {'change': 0.00, 'volume': 'N/A'},
-                'Energy': {'change': 0.00, 'volume': 'N/A'}
+                'Energy': {'change': 0.00, 'volume': 'N/A'},
+                'FMCG': {'change': 0.00, 'volume': 'N/A'},
+                'Telecom': {'change': 0.00, 'volume': 'N/A'},
+                'Infrastructure': {'change': 0.00, 'volume': 'N/A'}
             },
             'market_sentiment': 'neutral'
         })

@@ -174,28 +174,28 @@ class DataLayer:
 
             info = self._call_with_timeout(_fetch_info, timeout_s=4.0, fallback={}) or {}
             
-            # Extract key fundamentals
+            # Extract key fundamentals and convert to float
             result = {
                 'symbol': symbol,
                 'name': info.get('longName', ''),
                 'sector': info.get('sector', ''),
                 'industry': info.get('industry', ''),
-                'market_cap': info.get('marketCap', 0),
-                'current_price': info.get('currentPrice', info.get('regularMarketPrice', 0)),
-                'pe_ratio': info.get('forwardPE', info.get('trailingPE', 0)),
-                'pb_ratio': info.get('priceToBook', 0),
-                'dividend_yield': info.get('dividendYield', 0),
-                'beta': info.get('beta', 0),
-                'revenue': info.get('totalRevenue', 0),
-                'profit_margin': info.get('profitMargins', 0),
-                'operating_margin': info.get('operatingMargins', 0),
-                'return_on_equity': info.get('returnOnEquity', 0),
-                'debt_to_equity': info.get('debtToEquity', 0),
-                'free_cash_flow': info.get('freeCashflow', 0),
-                'earnings_growth': info.get('earningsQuarterlyGrowth', 0),
-                'revenue_growth': info.get('revenueGrowth', 0),
-                '52_week_high': info.get('fiftyTwoWeekHigh', 0),
-                '52_week_low': info.get('fiftyTwoWeekLow', 0),
+                'market_cap': float(info.get('marketCap', 0) or 0),
+                'current_price': float(info.get('currentPrice', info.get('regularMarketPrice', 0)) or 0),
+                'pe_ratio': float(info.get('forwardPE', info.get('trailingPE', 0)) or 0),
+                'pb_ratio': float(info.get('priceToBook', 0) or 0),
+                'dividend_yield': float(info.get('dividendYield', 0) or 0),
+                'beta': float(info.get('beta', 0) or 0),
+                'revenue': float(info.get('totalRevenue', 0) or 0),
+                'profit_margin': float(info.get('profitMargins', 0) or 0),
+                'operating_margin': float(info.get('operatingMargins', 0) or 0),
+                'return_on_equity': float(info.get('returnOnEquity', 0) or 0),
+                'debt_to_equity': float(info.get('debtToEquity', 0) or 0),
+                'free_cash_flow': float(info.get('freeCashflow', 0) or 0),
+                'earnings_growth': float(info.get('earningsQuarterlyGrowth', 0) or 0),
+                'revenue_growth': float(info.get('revenueGrowth', 0) or 0),
+                '52_week_high': float(info.get('fiftyTwoWeekHigh', 0) or 0),
+                '52_week_low': float(info.get('fiftyTwoWeekLow', 0) or 0),
             }
             self._cache_set(f"company_info:{symbol}", result)
             return result
