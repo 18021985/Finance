@@ -57,10 +57,10 @@ class IndianAPIProvider:
             data = self.get_stock_data("Reliance")
             if data and not data.get('error'):
                 return {
-                    'lastPrice': data.get('currentPrice', {}).get('NSE', 0),
-                    'pChange': data.get('percentChange', 0),
-                    'yearHigh': data.get('yearHigh', 0),
-                    'yearLow': data.get('yearLow', 0)
+                    'lastPrice': float(data.get('currentPrice', {}).get('NSE', 0) or 0),
+                    'pChange': float(data.get('percentChange', 0) or 0),
+                    'yearHigh': float(data.get('yearHigh', 0) or 0),
+                    'yearLow': float(data.get('yearLow', 0) or 0)
                 }
             return {"error": "Failed to fetch NIFTY data"}
         except Exception as e:
@@ -73,10 +73,10 @@ class IndianAPIProvider:
             data = self.get_stock_data(name)
             if data and not data.get('error'):
                 return {
-                    'lastPrice': data.get('currentPrice', {}).get('NSE', 0),
-                    'high': data.get('yearHigh', 0),
-                    'low': data.get('yearLow', 0),
-                    'percentChange': data.get('percentChange', 0),
+                    'lastPrice': float(data.get('currentPrice', {}).get('NSE', 0) or 0),
+                    'high': float(data.get('yearHigh', 0) or 0),
+                    'low': float(data.get('yearLow', 0) or 0),
+                    'percentChange': float(data.get('percentChange', 0) or 0),
                     'tickerId': data.get('tickerId', ''),
                     'companyName': data.get('companyName', '')
                 }
