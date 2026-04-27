@@ -24,6 +24,14 @@ except ImportError:
     ITICK_API_AVAILABLE = False
     logger.warning("iTick API provider not available")
 
+# Import Indian API provider (indianapi.in)
+try:
+    from providers.indian_api import IndianAPIProvider
+    INDIAN_API_AVAILABLE = True
+except ImportError:
+    INDIAN_API_AVAILABLE = False
+    logger.warning("Indian API provider not available")
+
 class IndianMarketAnalyzer:
     """Specialized analyzer for Indian stock market (NSE/BSE)"""
     
@@ -39,6 +47,9 @@ class IndianMarketAnalyzer:
         # Initialize iTick API provider as fallback
         from config import config
         self.itick_api = ITickAPIProvider(config.ITICK_API_KEY) if ITICK_API_AVAILABLE and config.ITICK_API_KEY else None
+        
+        # Initialize Indian API provider (indianapi.in) - no API key required
+        self.indian_api = IndianAPIProvider() if INDIAN_API_AVAILABLE else None
         
         # Use only NIFTY 50 as it's the most reliable index
         self.nse_indices = {
@@ -81,8 +92,22 @@ class IndianMarketAnalyzer:
             'vix': None,
         }
         
-        # Try iTick API first (most reliable with API key)
-        if self.itick_api:
+        # Try Indian API (indianapi.in) - no API key required, best for Indian market
+        if self.indian_api and 'NIFTY 50' not in overview['indices']:
+            try:
+                nifty_data = self.indian_api.get_nifty_50_data()
+                if nifty_data and not nifty_data.get('error'):
+                    overview['indices']['NIFTY 50'] = {
+                        'current': nifty_data.get('lastPrice', 0),
+                        'change': nifty_data.get('pChange', 0),
+                        'symbol': '^NSEI'
+                    }
+                    logger.info(f"Fetched NIFTY 50 from Indian API: {nifty_data.get('lastPrice')}")
+            except Exception as e:
+                logger.warning(f"Indian API failed, falling back to iTick API: {e}")
+        
+        # Try iTick API as second fallback
+        if self.itick_api and 'NIFTY 50' not in overview['indices']:
             try:
                 nifty_data = self.itick_api.get_nifty_50()
                 if nifty_data and not nifty_data.get('error'):
@@ -94,20 +119,6 @@ class IndianMarketAnalyzer:
                     logger.info(f"Fetched NIFTY 50 from iTick API: {nifty_data.get('lastPrice')}")
             except Exception as e:
                 logger.warning(f"iTick API failed, falling back to NSE API: {e}")
-        
-        # Try NSE API as second fallback
-        if self.nse_api and 'NIFTY 50' not in overview['indices']:
-            try:
-                nifty_data = self.nse_api.get_nifty_50_data()
-                if nifty_data and not nifty_data.get('error'):
-                    overview['indices']['NIFTY 50'] = {
-                        'current': nifty_data.get('lastPrice', 0),
-                        'change': nifty_data.get('pChange', 0),
-                        'symbol': '^NSEI'
-                    }
-                    logger.info(f"Fetched NIFTY 50 from NSE API: {nifty_data.get('lastPrice')}")
-            except Exception as e:
-                logger.warning(f"NSE API failed, falling back to yfinance: {e}")
         
         # Fetch major indices with yfinance as fallback
         for name, symbol in self.nse_indices.items():
@@ -138,17 +149,28 @@ class IndianMarketAnalyzer:
         
         # Fetch India VIX (skip for now - not critical)
         
-        # Calculate total market cap from key stocks using iTick API first
+        # Calculate total market cap from key stocks using Indian API first
         total_market_cap = 0
         total_volume = 0
         for name, symbol in self.key_stocks.items():
-            if self.itick_api:
+            if self.indian_api:
+                try:
+                    stock_data = self.indian_api.get_stock_quote(name)
+                    if stock_data and not stock_data.get('error'):
+                        price = stock_data.get('lastPrice', 0)
+                        # Rough market cap estimate
+                        estimated_market_cap = price * 1000000000  # Assume 1B shares
+                        total_market_cap += estimated_market_cap
+                        logger.info(f"Fetched {name} from Indian API: price={price}")
+                except Exception as e:
+                    logger.warning(f"Indian API failed for {name}: {e}")
+            
+            if self.itick_api and total_market_cap == 0:
                 try:
                     stock_data = self.itick_api.get_stock_quote(region='IN', code=symbol)
                     if stock_data and not stock_data.get('error'):
                         price = stock_data.get('lastPrice', 0)
                         volume = stock_data.get('volume', 0)
-                        # Rough market cap estimate
                         estimated_market_cap = price * volume * 1000
                         total_market_cap += estimated_market_cap
                         total_volume += volume
@@ -166,7 +188,7 @@ class IndianMarketAnalyzer:
                         total_volume += volume
                         logger.info(f"Fetched {name} from NSE API: market_cap={market_cap}")
                 except Exception as e:
-                    logger.warning(f"NSE API failed for {name}: {e}")
+                    logger.warning(f"NSE API failed for {name}: {e")
             else:
                 # Fallback to yfinance
                 def _fetch_stock():
@@ -223,7 +245,70 @@ class IndianMarketAnalyzer:
         except Exception:
             pass
         
-        # Try iTick API first
+        # Try Indian API (indianapi.in) first - no API key required
+        if self.indian_api:
+            try:
+                stock_data = self.indian_api.get_stock_quote(clean_symbol)
+                if stock_data and not stock_data.get('error'):
+                    analysis = {
+                        'symbol': symbol,
+                        'name': stock_data.get('companyName', clean_symbol),
+                        'exchange': 'NSE',
+                        'current_price': stock_data.get('lastPrice', 0),
+                        'currency': 'INR',
+                        
+                        # Price performance
+                        'performance': {
+                            '1d': stock_data.get('percentChange', 0),
+                            '1w': 0,
+                            '1m': 0,
+                            '3m': 0,
+                            '1y': 0,
+                        },
+                        
+                        # Valuation metrics
+                        'valuation': {
+                            'pe_ratio': None,
+                            'pb_ratio': None,
+                            'ev_ebitda': None,
+                            'market_cap': None,
+                        },
+                        
+                        # Fundamentals
+                        'fundamentals': {
+                            'revenue': None,
+                            'profit_margin': None,
+                            'operating_margin': None,
+                            'return_on_equity': None,
+                            'debt_to_equity': None,
+                            'dividend_yield': None,
+                        },
+                        
+                        # Technical indicators
+                        'technical': {
+                            'rsi': None,
+                            'macd': None,
+                            'bollinger_bands': None,
+                        },
+                        
+                        # Indian market specific
+                        'indian_context': {
+                            'nifty_comparison': None,
+                            'sector_performance': None,
+                        }
+                    }
+                    payload = self._to_json_safe(analysis)
+                    try:
+                        import time
+                        self._cache[(symbol, period)] = (time.time(), payload)
+                    except Exception:
+                        pass
+                    logger.info(f"Fetched {symbol} from Indian API")
+                    return payload
+            except Exception as e:
+                logger.warning(f"Indian API failed for {symbol}, falling back to iTick API: {e}")
+        
+        # Try iTick API as second fallback
         if self.itick_api:
             try:
                 stock_data = self.itick_api.get_stock_quote(region='IN', code=clean_symbol)
