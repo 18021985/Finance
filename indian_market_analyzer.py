@@ -161,23 +161,65 @@ class IndianMarketAnalyzer:
                 logger.error(f"Failed to fetch {name}: {e}")
                 continue
         
-        # Fetch India VIX (skip for now - not critical)
+        # Fetch India VIX
+        try:
+            vix_ticker = yf.Ticker("^INDIAVIX")
+            vix_hist = vix_ticker.history(period="5d", timeout=10)
+            if not vix_hist.empty:
+                overview['vix'] = round(float(vix_hist['Close'].iloc[-1]), 2)
+                logger.info(f"Fetched India VIX: {overview['vix']}")
+            else:
+                overview['vix'] = 15.0  # Fallback value
+                logger.warning("Using fallback India VIX")
+        except Exception as e:
+            overview['vix'] = 15.0  # Fallback value
+            logger.warning(f"Failed to fetch India VIX, using fallback: {e}")
         
-        # Use fallback market cap and volume directly to avoid timeout
-        overview['market_cap'] = 200000000000000  # ₹200T fallback
-        overview['volume'] = 15000000000  # 15B fallback
-        logger.info("Using fallback market cap and volume")
+        # Try to fetch real market cap and volume from NIFTY 50 data
+        try:
+            nifty_data = self.indian_api.get_nifty_50_data() if self.indian_api else None
+            if nifty_data and not nifty_data.get('error'):
+                overview['market_cap'] = nifty_data.get('totalMarketCap', 200000000000000)
+                overview['volume'] = nifty_data.get('totalTradedVolume', 15000000000)
+                logger.info(f"Fetched real market cap: {overview['market_cap']}, volume: {overview['volume']}")
+            else:
+                overview['market_cap'] = 200000000000000  # ₹200T fallback
+                overview['volume'] = 15000000000  # 15B fallback
+                logger.info("Using fallback market cap and volume")
+        except Exception as e:
+            overview['market_cap'] = 200000000000000
+            overview['volume'] = 15000000000
+            logger.warning(f"Failed to fetch market cap/volume, using fallback: {e}")
         
-        # Add fallback sectors data
-        overview['sectors'] = {
-            'Technology': {'change': 0.00, 'volume': 'N/A'},
-            'Banking': {'change': 0.00, 'volume': 'N/A'},
-            'Energy': {'change': 0.00, 'volume': 'N/A'},
-            'FMCG': {'change': 0.00, 'volume': 'N/A'},
-            'Telecom': {'change': 0.00, 'volume': 'N/A'},
-            'Infrastructure': {'change': 0.00, 'volume': 'N/A'}
+        # Fetch real sector data using representative stocks
+        sector_stocks = {
+            'Technology': 'INFY.NS',
+            'Banking': 'HDFCBANK.NS',
+            'Energy': 'RELIANCE.NS',
+            'FMCG': 'ITC.NS',
+            'Telecom': 'BHARTIARTL.NS',
+            'Infrastructure': 'LT.NS'
         }
-        logger.info("Using fallback sectors data")
+        
+        for sector, stock_symbol in sector_stocks.items():
+            try:
+                ticker = yf.Ticker(stock_symbol)
+                hist = ticker.history(period="1mo", timeout=8)
+                if not hist.empty:
+                    change = (hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100
+                    volume = float(hist['Volume'].iloc[-1]) if 'Volume' in hist.columns else 0
+                    overview['sectors'][sector] = {
+                        'change': round(float(change), 2),
+                        'volume': volume
+                    }
+                    logger.info(f"Fetched {sector} ({stock_symbol}): {change}%, volume: {volume}")
+                else:
+                    overview['sectors'][sector] = {'change': 0.00, 'volume': 0}
+                    logger.warning(f"No data for {sector} ({stock_symbol})")
+            except Exception as e:
+                overview['sectors'][sector] = {'change': 0.00, 'volume': 0}
+                logger.warning(f"Failed to fetch {sector}: {e}")
+            time.sleep(0.3)  # Small delay between requests
         
         # Determine market sentiment
         nifty_change = overview['indices'].get('NIFTY 50', {}).get('change', 0)
