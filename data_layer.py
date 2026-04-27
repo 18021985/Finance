@@ -8,6 +8,7 @@ import time
 from config import config
 from providers.market_data import CachedProvider, YFinanceMarketDataProvider
 from news_events import enrich_news_items
+from news_provider import AlphaVantageNewsProvider
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 class DataLayer:
@@ -23,6 +24,9 @@ class DataLayer:
         # Extra TTL caches for expensive yfinance calls (notably ticker.info and news)
         self._cache: Dict[str, tuple] = {}
         self._executor = ThreadPoolExecutor(max_workers=6)
+        
+        # Alpha Vantage News Provider for sentiment analysis
+        self.news_provider = AlphaVantageNewsProvider()
 
     def _call_with_timeout(self, fn, timeout_s: float, fallback=None):
         """
@@ -268,19 +272,50 @@ class DataLayer:
     
     def get_news_sentiment(self, symbol: str, days: int = 7) -> List[Dict]:
         """
-        Get news for sentiment analysis using free sources
-        For now, we'll use yfinance news (free)
+        Get news for sentiment analysis using Alpha Vantage News API with yfinance fallback
+        Returns enriched news with market impact indicators
         """
         try:
-            cached = self._cache_get(f"news:v2:{symbol}", ttl_seconds=10 * 60)
+            cached = self._cache_get(f"news:v3:{symbol}", ttl_seconds=10 * 60)
             if cached:
                 return cached
 
-            def _fetch_news():
+            # Try Alpha Vantage News API first (has built-in sentiment analysis)
+            def _fetch_av_news():
+                return self.news_provider.get_news_for_symbol(symbol, limit=20)
+
+            av_news = self._call_with_timeout(_fetch_av_news, timeout_s=8.0, fallback=None)
+            
+            if av_news:
+                # Alpha Vantage already provides sentiment scores and market impact
+                # Normalize to match our enrichment format
+                normalized = []
+                for item in av_news:
+                    normalized.append({
+                        "title": item.get("title", ""),
+                        "link": item.get("url", ""),
+                        "published": item.get("time_published", ""),
+                        "source": item.get("source", ""),
+                        "summary": item.get("summary", ""),
+                        # Alpha Vantage sentiment data
+                        "headline_sentiment": item.get("overall_sentiment_score", 0.0),
+                        "effective_sentiment": item.get("overall_sentiment_score", 0.0),
+                        "credibility_weight": 1.0,  # Alpha Vantage sources are trusted
+                        "recency_weight": 1.0,  # Alpha Vantage returns latest news
+                        "events": [],  # Alpha Vantage doesn't provide event taxonomy
+                        "market_impact": item.get("market_impact", "neutral"),
+                        "ticker_sentiment": item.get("ticker_sentiment", {}),
+                        "topics": item.get("topics", [])
+                    })
+                self._cache_set(f"news:v3:{symbol}", normalized)
+                return normalized
+
+            # Fallback to yfinance news
+            def _fetch_yf_news():
                 ticker = yf.Ticker(symbol)
                 return ticker.news
 
-            news = self._call_with_timeout(_fetch_news, timeout_s=4.0, fallback=[]) or []
+            news = self._call_with_timeout(_fetch_yf_news, timeout_s=4.0, fallback=[]) or []
             
             if not news:
                 return []
@@ -324,7 +359,7 @@ class DataLayer:
 
             # Enrich with event taxonomy + credibility + recency decay + headline sentiment
             enriched = enrich_news_items(articles)
-            self._cache_set(f"news:v2:{symbol}", enriched)
+            self._cache_set(f"news:v3:{symbol}", enriched)
             return enriched
         except Exception as e:
             print(f"Error fetching news for {symbol}: {str(e)}")

@@ -1633,12 +1633,14 @@ async def get_company_news(symbol: str, limit: int = 10):
 @app.get("/news/{symbol}/summary")
 async def get_company_news_summary(symbol: str, limit: int = 20):
     """
-    Return enriched news items plus an aggregate effective sentiment summary.
+    Return enriched news items plus an aggregate effective sentiment summary
+    with market impact indicators from Alpha Vantage News API.
     """
     try:
         items = analyzer.data_layer.get_news_sentiment(symbol) if hasattr(analyzer, "data_layer") else []
         items = (items or [])[: int(limit)]
         avg, n = aggregate_effective_sentiment(items)
+        
         # event histogram
         events = {}
         for it in items:
@@ -1646,12 +1648,42 @@ async def get_company_news_summary(symbol: str, limit: int = 20):
                 et = (ev or {}).get("event_type")
                 if et:
                     events[et] = events.get(et, 0) + 1
+        
+        # Market impact summary
+        impact_counts = {}
+        for it in items:
+            impact = it.get("market_impact", "neutral")
+            impact_counts[impact] = impact_counts.get(impact, 0) + 1
+        
+        # Ticker sentiment summary (from Alpha Vantage)
+        ticker_sentiment_summary = {}
+        for it in items:
+            for ticker, sentiment_data in (it.get("ticker_sentiment") or {}).items():
+                if ticker not in ticker_sentiment_summary:
+                    ticker_sentiment_summary[ticker] = {
+                        "avg_sentiment": 0.0,
+                        "avg_relevance": 0.0,
+                        "count": 0
+                    }
+                ticker_sentiment_summary[ticker]["avg_sentiment"] += sentiment_data.get("ticker_sentiment_score", 0)
+                ticker_sentiment_summary[ticker]["avg_relevance"] += sentiment_data.get("relevance_score", 0)
+                ticker_sentiment_summary[ticker]["count"] += 1
+        
+        # Calculate averages
+        for ticker in ticker_sentiment_summary:
+            count = ticker_sentiment_summary[ticker]["count"]
+            if count > 0:
+                ticker_sentiment_summary[ticker]["avg_sentiment"] = round(float(ticker_sentiment_summary[ticker]["avg_sentiment"] / count), 4)
+                ticker_sentiment_summary[ticker]["avg_relevance"] = round(float(ticker_sentiment_summary[ticker]["avg_relevance"] / count), 4)
+        
         return _json_safe(
             {
                 "symbol": symbol,
                 "count": n,
                 "effective_sentiment_avg": round(float(avg), 4),
                 "event_counts": events,
+                "market_impact_counts": impact_counts,
+                "ticker_sentiment_summary": ticker_sentiment_summary,
                 "items": items,
             }
         )
@@ -1663,6 +1695,8 @@ async def get_company_news_summary(symbol: str, limit: int = 20):
             "count": 1,
             "effective_sentiment_avg": 0.0,
             "event_counts": {},
+            "market_impact_counts": {"neutral": 1},
+            "ticker_sentiment_summary": {},
             "items": [
                 {
                     'title': f'{symbol} Market Update',
@@ -1674,6 +1708,36 @@ async def get_company_news_summary(symbol: str, limit: int = 20):
                 }
             ]
         })
+
+
+@app.get("/news/market")
+async def get_market_news(topics: str = "financial_markets,economy_macro", limit: int = 20):
+    """
+    Get general market news with sentiment analysis from Alpha Vantage
+    
+    Args:
+        topics: Comma-separated news topics (e.g., "financial_markets,economy_macro")
+        limit: Number of news items
+    """
+    try:
+        if hasattr(analyzer, "data_layer") and hasattr(analyzer.data_layer, "news_provider"):
+            items = analyzer.data_layer.news_provider.get_market_news(topics=topics, limit=limit)
+            return _json_safe(items)
+        
+        return _json_safe([])
+    except Exception as e:
+        # Return fallback market news on error instead of 500
+        import datetime
+        return _json_safe([
+            {
+                'title': 'Market Update',
+                'summary': 'Market news temporarily unavailable. Please try again later.',
+                'sentiment': 'neutral',
+                'published_at': datetime.datetime.now().isoformat(),
+                'url': '#',
+                'error': str(e)
+            }
+        ])
 
 @app.get("/recommendations")
 async def get_investment_recommendations(
