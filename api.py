@@ -397,9 +397,9 @@ async def analyze_company(request: AnalysisRequest):
             raise HTTPException(status_code=500, detail=result['error'])
         
         if result.get('format') == 'markdown':
-            return {"content": result['content'], "format": "markdown"}
+            return _json_safe({"content": result['content'], "format": "markdown"})
         
-        return result
+        return _json_safe(result)
         
     except HTTPException:
         raise
@@ -471,7 +471,7 @@ async def analyze_company_enhanced(symbol: str):
         result = analyzer.analyze_company_enhanced(symbol)
         if 'error' in result:
             raise HTTPException(status_code=500, detail=result['error'])
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -588,7 +588,7 @@ async def assess_portfolio_risk(request: dict):
             raise HTTPException(status_code=400, detail="holdings and prices are required")
         
         result = analyzer.assess_portfolio_risk(holdings, prices, volatilities)
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -617,7 +617,7 @@ async def calculate_position_size(request: dict):
             raise HTTPException(status_code=400, detail="portfolio_value, entry_price, and stop_loss are required")
         
         result = analyzer.calculate_position_size(portfolio_value, entry_price, stop_loss, confidence)
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -1576,9 +1576,9 @@ async def get_geopolitical_risks():
     try:
         if analyzer.geopolitical_analyzer:
             result = analyzer.geopolitical_analyzer.get_current_risks()
-            return result
+            return _json_safe(result)
         else:
-            return {"error": "Geopolitical analyzer not available"}
+            return _json_safe({"error": "Geopolitical analyzer not available"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1590,9 +1590,9 @@ async def get_risk_sentiment():
     try:
         if analyzer.geopolitical_analyzer:
             result = analyzer.geopolitical_analyzer.get_risk_sentiment()
-            return result
+            return _json_safe(result)
         else:
-            return {"error": "Geopolitical analyzer not available"}
+            return _json_safe({"error": "Geopolitical analyzer not available"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2117,7 +2117,7 @@ async def get_macro_scenarios():
     """
     try:
         result = analyzer.get_macro_scenarios()
-        return result
+        return _json_safe(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2132,7 +2132,7 @@ async def analyze_multi_asset(symbol: str):
         result = analyzer.analyze_multi_asset(symbol)
         if 'error' in result:
             raise HTTPException(status_code=500, detail=result['error'])
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -2150,7 +2150,7 @@ async def get_asset_scenarios(symbol: str):
         result = analyzer.get_asset_scenarios(symbol)
         if 'error' in result:
             raise HTTPException(status_code=500, detail=result['error'])
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -2169,7 +2169,7 @@ async def get_correlation_matrix(assets: str = Query(None, description="Comma-se
         result = analyzer.get_correlation_matrix(asset_list)
         if 'error' in result:
             raise HTTPException(status_code=500, detail=result['error'])
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -2193,7 +2193,7 @@ async def assess_diversification(request: dict):
         result = analyzer.assess_diversification(holdings)
         if 'error' in result:
             raise HTTPException(status_code=500, detail=result['error'])
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -2213,18 +2213,7 @@ async def get_allocation_recommendation(strategy: str, signals: str = Query(None
         import json
         signal_dict = json.loads(signals) if signals else None
         result = analyzer.get_allocation_recommendation(strategy, signal_dict)
-
-        # Convert numpy types to Python native types for JSON serialization
-        if result and isinstance(result, dict):
-            for key, value in result.items():
-                if hasattr(value, 'item'):  # numpy types
-                    result[key] = value.item()
-                elif isinstance(value, dict):
-                    for k, v in value.items():
-                        if hasattr(v, 'item'):
-                            value[k] = v.item()
-
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -2242,8 +2231,8 @@ async def compare_allocation_strategies():
         Comparison of expected returns, volatility, and Sharpe ratios
     """
     try:
-        result = analyzer.compare_allocation_strategies()
-        return result
+        result = analyzer.compare_allocations()
+        return _json_safe(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2257,7 +2246,7 @@ async def get_risk_sentiment():
     """
     try:
         result = analyzer.get_risk_on_risk_off()
-        return result
+        return _json_safe(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2299,7 +2288,7 @@ async def record_outcome(payload: Dict):
             predicted_prob = payload.get("predicted_probability", 0.5)
             analyzer.prob_forecaster.record_outcome(predicted_prob, actual_up)
         
-        return {"success": success, "message": "Outcome recorded"}
+        return _json_safe({"success": success, "message": "Outcome recorded"})
     except HTTPException:
         raise
     except Exception as e:
