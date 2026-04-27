@@ -17,3 +17,10 @@ class Config:
     CACHE_DURATION = 300  # 5 minutes
 
 config = Config()
+
+# Log API key status for debugging
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info(f"ALPHA_VANTAGE_API_KEY configured: {bool(config.ALPHA_VANTAGE_API_KEY)}")
+logger.info(f"NEWS_API_KEY configured: {bool(config.NEWS_API_KEY)}")
