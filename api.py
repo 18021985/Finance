@@ -42,6 +42,100 @@ async def health():
         raise HTTPException(status_code=503, detail=f"Health check failed: {str(e)}")
 
 
+@app.get("/test-yfinance")
+async def test_yfinance():
+    """
+    Test endpoint to verify yfinance connectivity and diagnose issues
+    """
+    import yfinance as yf
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    results = {
+        "test_name": "yfinance_connectivity",
+        "timestamp": time.time(),
+        "tests": []
+    }
+    
+    # Test 1: Simple ticker fetch
+    try:
+        logger.info("Test 1: Fetching AAPL data")
+        ticker = yf.Ticker("AAPL")
+        hist = ticker.history(period="1d", timeout=30)
+        results["tests"].append({
+            "name": "fetch_aapl",
+            "status": "success" if not hist.empty else "empty_data",
+            "data_points": len(hist),
+            "last_price": float(hist['Close'].iloc[-1]) if not hist.empty else None
+        })
+        logger.info(f"Test 1 passed: {len(hist)} data points")
+    except Exception as e:
+        results["tests"].append({
+            "name": "fetch_aapl",
+            "status": "error",
+            "error": str(e)
+        })
+        logger.error(f"Test 1 failed: {e}")
+    
+    # Test 2: Indian index fetch
+    try:
+        logger.info("Test 2: Fetching NIFTY 50 (^NSEI)")
+        ticker = yf.Ticker("^NSEI")
+        hist = ticker.history(period="1d", timeout=30)
+        results["tests"].append({
+            "name": "fetch_nifty50",
+            "status": "success" if not hist.empty else "empty_data",
+            "data_points": len(hist),
+            "last_price": float(hist['Close'].iloc[-1]) if not hist.empty else None
+        })
+        logger.info(f"Test 2 passed: {len(hist)} data points")
+    except Exception as e:
+        results["tests"].append({
+            "name": "fetch_nifty50",
+            "status": "error",
+            "error": str(e)
+        })
+        logger.error(f"Test 2 failed: {e}")
+    
+    # Test 3: Indian stock fetch
+    try:
+        logger.info("Test 3: Fetching RELIANCE.NS")
+        ticker = yf.Ticker("RELIANCE.NS")
+        hist = ticker.history(period="1d", timeout=30)
+        results["tests"].append({
+            "name": "fetch_reliance",
+            "status": "success" if not hist.empty else "empty_data",
+            "data_points": len(hist),
+            "last_price": float(hist['Close'].iloc[-1]) if not hist.empty else None
+        })
+        logger.info(f"Test 3 passed: {len(hist)} data points")
+    except Exception as e:
+        results["tests"].append({
+            "name": "fetch_reliance",
+            "status": "error",
+            "error": str(e)
+        })
+        logger.error(f"Test 3 failed: {e}")
+    
+    # Test 4: Check user-agent
+    try:
+        user_agent = yf.utils.request_headers.get('User-Agent', 'not_set')
+        results["tests"].append({
+            "name": "user_agent_check",
+            "status": "success",
+            "user_agent": user_agent
+        })
+        logger.info(f"User-Agent: {user_agent}")
+    except Exception as e:
+        results["tests"].append({
+            "name": "user_agent_check",
+            "status": "error",
+            "error": str(e)
+        })
+    
+    return _json_safe(results)
+
+
 async def _to_thread_timeout(fn, timeout_s: float):
     """
     Run blocking IO/CPU work off the event loop with a hard timeout.
