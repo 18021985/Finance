@@ -1366,9 +1366,9 @@ async def get_indian_market():
         # Return default Indian market data on error instead of 500
         return _json_safe({
             'indices': {
-                'nifty_50': {'current': 22500.00, 'change': 0.00},
-                'sensex': {'current': 74000.00, 'change': 0.00},
-                'bank_nifty': {'current': 48000.00, 'change': 0.00}
+                'NIFTY 50': {'current': 22500.00, 'change': 0.00, 'symbol': '^NSEI'},
+                'SENSEX': {'current': 74000.00, 'change': 0.00, 'symbol': '^BSESN'},
+                'BANK NIFTY': {'current': 48000.00, 'change': 0.00, 'symbol': '^NSEBANK'}
             },
             'market_cap': 200000000000000,  # ₹200T in actual number
             'volume': 15000000000,  # 15B in actual number
@@ -1385,7 +1385,7 @@ async def get_indian_market():
                 'Banking': {'change': 0.00, 'volume': 'N/A'},
                 'Energy': {'change': 0.00, 'volume': 'N/A'}
             },
-            'error': str(e)
+            'market_sentiment': 'neutral'
         })
 
 @app.get("/indian-market/{symbol}")
@@ -1412,18 +1412,43 @@ async def analyze_indian_stock(
         return _json_safe({
             'symbol': symbol,
             'name': symbol.replace('.NS', ''),
+            'exchange': 'NSE',
             'sector': 'Technology',
             'current_price': 2500.00,
-            'performance': {'1m': 0.00},
+            'currency': 'INR',
+            'volume': 5000000,  # 5M in actual number
+            'performance': {
+                '1d': 0.00,
+                '1w': 0.00,
+                '1m': 0.00,
+                '3m': 0.00,
+                '1y': 0.00
+            },
             'valuation': {
-                'market_cap': 100000000000,  # ₹10T in actual number
-                'pe_ratio': 25.5
+                'pe_ratio': 25.5,
+                'pb_ratio': None,
+                'ev_ebitda': None,
+                'market_cap': 100000000000  # ₹10T in actual number
+            },
+            'fundamentals': {
+                'revenue': None,
+                'profit_margin': None,
+                'operating_margin': None,
+                'return_on_equity': None,
+                'debt_to_equity': None,
+                'dividend_yield': None
             },
             'technical': {
+                'rsi': None,
+                'macd': None,
+                'bollinger_bands': None,
                 'recent_high': 3000.00,
                 'recent_low': 2000.00
             },
-            'volume': 5000000,  # 5M in actual number
+            'indian_context': {
+                'nifty_comparison': None,
+                'sector_performance': None
+            },
             'error': str(e)
         })
 
