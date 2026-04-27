@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class ITickAPIProvider:
     """Provider for market data using iTick API"""
     
-    def __init__(self, api_key: str, base_url: str = "https://api.itick.org"):
+    def __init__(self, api_key: str, base_url: str = "https://api-free.itick.org"):
         self.api_key = api_key
         self.base_url = base_url
         self.session = requests.Session()
