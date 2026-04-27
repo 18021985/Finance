@@ -145,9 +145,9 @@ def enrich_news_items(items: List[Dict]) -> List[Dict]:
         published = it.get("published")
         source = it.get("source", "")
 
-        cred = source_credibility_weight(source)
-        rec = recency_weight(published)
-        sent = headline_sentiment_score(title)
+        cred = float(source_credibility_weight(source))
+        rec = float(recency_weight(published))
+        sent = float(headline_sentiment_score(title))
         events = detect_events(title)
 
         # Event contribution (bounded, weighted by severity)
@@ -155,12 +155,12 @@ def enrich_news_items(items: List[Dict]) -> List[Dict]:
         severity_boost = 1.0
         if events:
             # Calculate average event score
-            event_score = sum(e.polarity * e.confidence for e in events) / max(1, len(events))
+            event_score = float(sum(e.polarity * e.confidence for e in events) / max(1, len(events)))
             # Boost weight if high-severity events are present
             high_severity_count = sum(1 for e in events if DEFAULT_EVENT_TAXONOMY.get(e.event_type, {}).get("severity") == "high")
             if high_severity_count > 0:
                 severity_boost = 1.15
-        effective = (0.7 * sent + 0.3 * event_score) * cred * rec * severity_boost
+        effective = float((0.7 * sent + 0.3 * event_score) * cred * rec * severity_boost)
 
         # Include severity in event output
         events_with_severity = []
