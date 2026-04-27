@@ -189,7 +189,7 @@ class IndianMarketAnalyzer:
                         total_volume += volume
                         logger.info(f"Fetched {name} from NSE API: market_cap={market_cap}")
                 except Exception as e:
-                    logger.warning(f"NSE API failed for {name}: {e")
+                    logger.warning(f"NSE API failed for {name}: {e}")
             else:
                 # Fallback to yfinance
                 def _fetch_stock():
