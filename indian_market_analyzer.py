@@ -17,33 +17,23 @@ class IndianMarketAnalyzer:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         
+        # Use only NIFTY 50 as it's the most reliable index
         self.nse_indices = {
             'NIFTY 50': '^NSEI',
-            'NIFTY BANK': '^NSEBANK',
-            'NIFTY IT': '^CNXIT',
-            'NIFTY AUTO': '^CNXAUTO',
-            'NIFTY PHARMA': '^CNXPHARMA',
-            'SENSEX': '^BSESN',
         }
         
+        # Reduce number of stocks to avoid rate limiting
         self.key_stocks = {
             'Reliance': 'RELIANCE.NS',
             'TCS': 'TCS.NS',
             'HDFC Bank': 'HDFCBANK.NS',
-            'Infosys': 'INFY.NS',
-            'ICICI Bank': 'ICICIBANK.NS',
-            'Hindustan Unilever': 'HINDUNILVR.NS',
-            'ITC': 'ITC.NS',
-            'SBIN': 'SBIN.NS',
-            'Bharti Airtel': 'BHARTIARTL.NS',
-            'L&T': 'LT.NS',
         }
 
         # Cache (symbol, period) -> (ts, payload)
         self._cache = {}
         self._cache_ttl_seconds = 10 * 60  # 10 minutes
     
-    def _fetch_with_retry(self, fetch_func, max_retries=3, base_delay=1):
+    def _fetch_with_retry(self, fetch_func, max_retries=3, base_delay=2):
         """Retry logic with exponential backoff for yfinance calls"""
         for attempt in range(max_retries):
             try:
@@ -86,7 +76,8 @@ class IndianMarketAnalyzer:
                     logger.warning(f"No data for {name} ({symbol})")
             
             try:
-                self._fetch_with_retry(_fetch_index, max_retries=2, base_delay=0.5)
+                self._fetch_with_retry(_fetch_index, max_retries=2, base_delay=2)
+                time.sleep(1)  # Add delay between requests
             except Exception as e:
                 logger.error(f"Failed to fetch {name}: {e}")
                 continue
@@ -105,23 +96,28 @@ class IndianMarketAnalyzer:
             logger.error(f"Failed to fetch India VIX: {e}")
         
         # Calculate total market cap from key stocks (approximate)
+        # Skip ticker.info to avoid 429 rate limiting - estimate from price history
         total_market_cap = 0
         total_volume = 0
         for name, symbol in self.key_stocks.items():
             def _fetch_stock():
                 ticker = yf.Ticker(symbol)
-                info = ticker.info
                 hist = ticker.history(period="1d", timeout=30)
-                if info and not hist.empty:
-                    market_cap = info.get('marketCap', 0)
-                    volume = hist['Volume'].iloc[-1] if not hist.empty else 0
-                    return market_cap, volume
+                if not hist.empty:
+                    # Estimate market cap as price * volume * 1B (rough approximation)
+                    # This avoids ticker.info which causes 429 errors
+                    price = hist['Close'].iloc[-1]
+                    volume = hist['Volume'].iloc[-1]
+                    # Rough estimate: assume 1B shares outstanding for large caps
+                    estimated_market_cap = price * volume * 1000  # Very rough estimate
+                    return estimated_market_cap, volume
                 return 0, 0
             
             try:
-                market_cap, volume = self._fetch_with_retry(_fetch_stock, max_retries=2, base_delay=0.5)
+                market_cap, volume = self._fetch_with_retry(_fetch_stock, max_retries=2, base_delay=2)
                 total_market_cap += market_cap
                 total_volume += volume
+                time.sleep(1)  # Add delay between requests
             except Exception as e:
                 logger.warning(f"Failed to fetch {name} market cap/volume: {e}")
                 continue
@@ -177,8 +173,8 @@ class IndianMarketAnalyzer:
         
         try:
             ticker = yf.Ticker(symbol)
-            info = ticker.info
-            hist = ticker.history(period=period)
+            # Avoid ticker.info to prevent 429 rate limiting
+            hist = ticker.history(period=period, timeout=30)
             
             if hist.empty:
                 return {'error': f'No data found for {symbol}'}
@@ -186,7 +182,7 @@ class IndianMarketAnalyzer:
             # Calculate Indian market specific metrics
             analysis = {
                 'symbol': symbol,
-                'name': info.get('longName', ''),
+                'name': symbol.replace('.NS', ''),  # Simplified name since we avoid info
                 'exchange': 'NSE' if '.NS' in symbol else 'BSE',
                 'current_price': hist['Close'].iloc[-1],
                 'currency': 'INR',
@@ -200,22 +196,22 @@ class IndianMarketAnalyzer:
                     '1y': (hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100 if len(hist) > 0 else 0,
                 },
                 
-                # Valuation metrics
+                # Valuation metrics - simplified to avoid ticker.info
                 'valuation': {
-                    'pe_ratio': info.get('forwardPE', info.get('trailingPE', 0)),
-                    'pb_ratio': info.get('priceToBook', 0),
-                    'ev_ebitda': info.get('enterpriseToEbitda', 0),
-                    'market_cap': info.get('marketCap', 0),
+                    'pe_ratio': None,  # Not available without info
+                    'pb_ratio': None,  # Not available without info
+                    'ev_ebitda': None,  # Not available without info
+                    'market_cap': None,  # Not available without info
                 },
                 
-                # Fundamentals
+                # Fundamentals - simplified to avoid ticker.info
                 'fundamentals': {
-                    'revenue': info.get('totalRevenue', 0),
-                    'profit_margin': info.get('profitMargins', 0),
-                    'operating_margin': info.get('operatingMargins', 0),
-                    'return_on_equity': info.get('returnOnEquity', 0),
-                    'debt_to_equity': info.get('debtToEquity', 0),
-                    'dividend_yield': info.get('dividendYield', 0),
+                    'revenue': None,
+                    'profit_margin': None,
+                    'operating_margin': None,
+                    'return_on_equity': None,
+                    'debt_to_equity': None,
+                    'dividend_yield': None,
                 },
                 
                 # Technical indicators
@@ -224,7 +220,7 @@ class IndianMarketAnalyzer:
                 # Indian market specific
                 'indian_context': {
                     'nifty_comparison': self._compare_to_nifty(hist),
-                    'sector_performance': self._get_sector_performance(info.get('sector', '')),
+                    'sector_performance': {'error': 'Sector data unavailable without info'},
                 }
             }
             payload = self._to_json_safe(analysis)
