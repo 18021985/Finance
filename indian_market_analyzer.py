@@ -211,6 +211,7 @@ class IndianMarketAnalyzer:
                         'exchange': 'NSE',
                         'current_price': stock_data.get('lastPrice', 0),
                         'currency': 'INR',
+                        'volume': 0,  # Not available from Indian API
                         
                         # Price performance
                         'performance': {
@@ -244,6 +245,8 @@ class IndianMarketAnalyzer:
                             'rsi': None,
                             'macd': None,
                             'bollinger_bands': None,
+                            'recent_high': stock_data.get('high', 0),
+                            'recent_low': stock_data.get('low', 0),
                         },
                         
                         # Indian market specific
@@ -274,6 +277,7 @@ class IndianMarketAnalyzer:
                         'exchange': 'NSE',
                         'current_price': stock_data.get('lastPrice', 0),
                         'currency': 'INR',
+                        'volume': stock_data.get('volume', 0),
                         
                         # Price performance
                         'performance': {
@@ -307,6 +311,8 @@ class IndianMarketAnalyzer:
                             'rsi': None,
                             'macd': None,
                             'bollinger_bands': None,
+                            'recent_high': stock_data.get('high', 0),
+                            'recent_low': stock_data.get('low', 0),
                         },
                         
                         # Indian market specific
