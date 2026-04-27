@@ -3,11 +3,20 @@ import pandas as pd
 from typing import Dict, List
 from datetime import datetime
 import math
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 class IndianMarketAnalyzer:
     """Specialized analyzer for Indian stock market (NSE/BSE)"""
     
     def __init__(self):
+        # Configure user-agent to avoid yfinance blocking
+        yf.utils.request_headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
         self.nse_indices = {
             'NIFTY 50': '^NSEI',
             'NIFTY BANK': '^NSEBANK',
@@ -34,8 +43,22 @@ class IndianMarketAnalyzer:
         self._cache = {}
         self._cache_ttl_seconds = 10 * 60  # 10 minutes
     
+    def _fetch_with_retry(self, fetch_func, max_retries=3, base_delay=1):
+        """Retry logic with exponential backoff for yfinance calls"""
+        for attempt in range(max_retries):
+            try:
+                return fetch_func()
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    logger.error(f"Failed after {max_retries} retries: {e}")
+                    raise
+                delay = base_delay * (2 ** attempt)
+                logger.warning(f"Retry {attempt + 1}/{max_retries} after {delay}s delay: {e}")
+                time.sleep(delay)
+    
     def get_indian_market_overview(self) -> Dict:
         """Get overview of Indian market indices and sectors"""
+        logger.info("Fetching Indian market overview")
         overview = {
             'indices': {},
             'sectors': {},
@@ -47,9 +70,9 @@ class IndianMarketAnalyzer:
         
         # Fetch major indices
         for name, symbol in self.nse_indices.items():
-            try:
+            def _fetch_index():
                 ticker = yf.Ticker(symbol)
-                hist = ticker.history(period="1mo")
+                hist = ticker.history(period="1mo", timeout=30)
                 if not hist.empty:
                     current = hist['Close'].iloc[-1]
                     change = (hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100
@@ -58,38 +81,57 @@ class IndianMarketAnalyzer:
                         'change': round(change, 2),
                         'symbol': symbol
                     }
+                    logger.info(f"Fetched {name}: {current}, change: {change}%")
+                else:
+                    logger.warning(f"No data for {name} ({symbol})")
+            
+            try:
+                self._fetch_with_retry(_fetch_index, max_retries=2, base_delay=0.5)
             except Exception as e:
+                logger.error(f"Failed to fetch {name}: {e}")
                 continue
         
         # Fetch India VIX
-        try:
+        def _fetch_vix():
             vix_ticker = yf.Ticker('^INDIAVIX')
-            vix_hist = vix_ticker.history(period="1d")
+            vix_hist = vix_ticker.history(period="1d", timeout=30)
             if not vix_hist.empty:
                 overview['vix'] = round(vix_hist['Close'].iloc[-1], 2)
-        except Exception:
-            pass
+                logger.info(f"Fetched India VIX: {overview['vix']}")
+        
+        try:
+            self._fetch_with_retry(_fetch_vix, max_retries=2, base_delay=0.5)
+        except Exception as e:
+            logger.error(f"Failed to fetch India VIX: {e}")
         
         # Calculate total market cap from key stocks (approximate)
         total_market_cap = 0
         total_volume = 0
         for name, symbol in self.key_stocks.items():
-            try:
+            def _fetch_stock():
                 ticker = yf.Ticker(symbol)
                 info = ticker.info
-                hist = ticker.history(period="1d")
+                hist = ticker.history(period="1d", timeout=30)
                 if info and not hist.empty:
                     market_cap = info.get('marketCap', 0)
                     volume = hist['Volume'].iloc[-1] if not hist.empty else 0
-                    total_market_cap += market_cap
-                    total_volume += volume
-            except Exception:
+                    return market_cap, volume
+                return 0, 0
+            
+            try:
+                market_cap, volume = self._fetch_with_retry(_fetch_stock, max_retries=2, base_delay=0.5)
+                total_market_cap += market_cap
+                total_volume += volume
+            except Exception as e:
+                logger.warning(f"Failed to fetch {name} market cap/volume: {e}")
                 continue
         
         if total_market_cap > 0:
             overview['market_cap'] = total_market_cap
+            logger.info(f"Total market cap: {total_market_cap}")
         if total_volume > 0:
             overview['volume'] = total_volume
+            logger.info(f"Total volume: {total_volume}")
         
         # Add sector performance based on sector indices
         sector_mapping = {
@@ -112,6 +154,7 @@ class IndianMarketAnalyzer:
         elif nifty_change < -2:
             overview['market_sentiment'] = 'bearish'
         
+        logger.info(f"Market overview complete: {len(overview['indices'])} indices, market_cap={overview['market_cap']}, volume={overview['volume']}")
         return self._to_json_safe(overview)
     
     def analyze_indian_stock(self, symbol: str, period: str = "3mo") -> Dict:
