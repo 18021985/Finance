@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 import time
 from config import config
 from providers.market_data import CachedProvider, YFinanceMarketDataProvider
+from providers.finnhub_provider import FinnhubProvider
 from news_events import enrich_news_items
 from news_provider import AlphaVantageNewsProvider
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
@@ -20,6 +21,9 @@ class DataLayer:
         self.request_count = 0
         # Pluggable market data provider (yfinance fallback)
         self.market_data = CachedProvider(YFinanceMarketDataProvider(), quote_ttl_seconds=15, bars_ttl_seconds=60)
+        
+        # Finnhub provider as alternative data source
+        self.finnhub = FinnhubProvider() if config.FINNHUB_API_KEY else None
 
         # Extra TTL caches for expensive yfinance calls (notably ticker.info and news)
         self._cache: Dict[str, tuple] = {}
@@ -68,7 +72,7 @@ class DataLayer:
         
     def get_stock_data(self, symbol: str, period: str = "1y") -> pd.DataFrame:
         """
-        Get historical stock data using yfinance (free, no rate limits)
+        Get historical stock data using yfinance (primary) with Finnhub fallback
         Enforces timeout to prevent blocking.
         Includes data quality safeguards.
 
@@ -77,9 +81,24 @@ class DataLayer:
             period: Time period ('1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max')
         """
         def _fetch():
+            # Try yfinance first
             data = self.market_data.get_bars(symbol, period=period, interval="1d")
             if data is None or data.empty:
-                raise ValueError(f"No data found for symbol {symbol}")
+                # Fallback to Finnhub if available
+                if self.finnhub:
+                    print(f"yfinance returned no data for {symbol}, trying Finnhub...")
+                    # Convert period to Finnhub resolution
+                    resolution_map = {
+                        '1d': 'D', '5d': 'D', '1mo': 'D', '3mo': 'D', 
+                        '6mo': 'D', '1y': 'D', '2y': 'W', '5y': 'W', 
+                        '10y': 'W', 'ytd': 'D', 'max': 'W'
+                    }
+                    resolution = resolution_map.get(period, 'D')
+                    data = self.finnhub.get_stock_candles(symbol, resolution=resolution)
+                    if data is not None and not data.empty:
+                        print(f"Finnhub successfully fetched data for {symbol}")
+                if data is None or data.empty:
+                    raise ValueError(f"No data found for symbol {symbol}")
             # Data quality guard: ensure ascending unique index
             try:
                 data = data[~data.index.duplicated(keep="last")].sort_index()
@@ -89,7 +108,7 @@ class DataLayer:
             data = self._apply_data_quality_safeguards(data, symbol)
             return data
 
-        result = self._call_with_timeout(_fetch, timeout_s=10.0, fallback=None)
+        result = self._call_with_timeout(_fetch, timeout_s=15.0, fallback=None)
         if result is None:
             raise Exception(f"Timeout fetching stock data for {symbol}")
         return result
