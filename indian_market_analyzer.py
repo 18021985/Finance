@@ -163,36 +163,10 @@ class IndianMarketAnalyzer:
         
         # Fetch India VIX (skip for now - not critical)
         
-        # Calculate total market cap from key stocks using Indian API first
-        total_market_cap = 0
-        total_volume = 0
-        for name, symbol in self.key_stocks.items():
-            if self.indian_api:
-                try:
-                    stock_data = self.indian_api.get_stock_quote(name)
-                    if stock_data and not stock_data.get('error'):
-                        price = stock_data.get('lastPrice', 0)
-                        # Rough market cap estimate
-                        estimated_market_cap = price * 1000000000  # Assume 1B shares
-                        total_market_cap += estimated_market_cap
-                        logger.info(f"Fetched {name} from Indian API: price={price}")
-                        break  # Only need one stock for estimate
-                except Exception as e:
-                    logger.warning(f"Indian API failed for {name}: {e}")
-                    break
-        
-        # If no data from Indian API, use fallback
-        if total_market_cap == 0:
-            total_market_cap = 200000000000000  # ₹200T fallback
-            total_volume = 15000000000  # 15B fallback
-            logger.info("Using fallback market cap and volume")
-        
-        if total_market_cap > 0:
-            overview['market_cap'] = total_market_cap
-            logger.info(f"Total market cap: {total_market_cap}")
-        if total_volume > 0:
-            overview['volume'] = total_volume
-            logger.info(f"Total volume: {total_volume}")
+        # Use fallback market cap and volume directly to avoid timeout
+        overview['market_cap'] = 200000000000000  # ₹200T fallback
+        overview['volume'] = 15000000000  # 15B fallback
+        logger.info("Using fallback market cap and volume")
         
         # Determine market sentiment
         nifty_change = overview['indices'].get('NIFTY 50', {}).get('change', 0)
