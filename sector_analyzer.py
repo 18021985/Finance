@@ -54,9 +54,9 @@ class SectorAnalyzer:
         try:
             market_ticker = yf.Ticker(market_index)
             market_hist = market_ticker.history(period="3mo")
-            market_return = (market_hist['Close'].iloc[-1] / market_hist['Close'].iloc[0] - 1) * 100
+            market_return = float((market_hist['Close'].iloc[-1] / market_hist['Close'].iloc[0] - 1) * 100) if not market_hist.empty else 0.0
         except:
-            market_return = 0
+            market_return = 0.0
         
         sector_analysis = []
         
@@ -69,11 +69,11 @@ class SectorAnalyzer:
                     continue
                 
                 # Calculate sector performance
-                sector_return = (hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100
-                relative_performance = sector_return - market_return
+                sector_return = float((hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100)
+                relative_performance = float(sector_return - market_return)
                 
                 # Calculate momentum
-                recent_trend = (hist['Close'].iloc[-1] / hist['Close'].iloc[-20] - 1) * 100 if len(hist) > 20 else 0
+                recent_trend = float((hist['Close'].iloc[-1] / hist['Close'].iloc[-20] - 1) * 100) if len(hist) > 20 else 0.0
                 
                 # Generate signal
                 signal = self._generate_sector_signal(
@@ -207,9 +207,9 @@ class SectorAnalyzer:
                 return {'error': 'Insufficient data'}
             
             # Calculate returns
-            stock_return = (stock_hist['Close'].iloc[-1] / stock_hist['Close'].iloc[0] - 1) * 100
-            sector_return = (sector_hist['Close'].iloc[-1] / sector_hist['Close'].iloc[0] - 1) * 100
-            relative_return = stock_return - sector_return
+            stock_return = float((stock_hist['Close'].iloc[-1] / stock_hist['Close'].iloc[0] - 1) * 100)
+            sector_return = float((sector_hist['Close'].iloc[-1] / sector_hist['Close'].iloc[0] - 1) * 100)
+            relative_return = float(stock_return - sector_return)
             
             # Calculate beta (simplified)
             stock_daily = stock_hist['Close'].pct_change().dropna()

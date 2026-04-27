@@ -119,7 +119,7 @@ class MultiAssetAnalyzer:
             return {
                 'asset': symbol,
                 'asset_class': 'equity',
-                'current_price': round(hist['Close'].iloc[-1], 2),
+                'current_price': round(float(hist['Close'].iloc[-1]), 2),
                 'technical': technical,
                 'fundamental': fundamental,
                 'insight': insight,
@@ -141,7 +141,7 @@ class MultiAssetAnalyzer:
             technical = self._calculate_technical_metrics(hist)
             
             # Yield analysis (simplified)
-            current_price = hist['Close'].iloc[-1]
+            current_price = float(hist['Close'].iloc[-1])
             yield_estimate = self._estimate_bond_yield(symbol, current_price)
             
             # Duration sensitivity
@@ -185,7 +185,7 @@ class MultiAssetAnalyzer:
                 'asset': symbol,
                 'asset_class': 'commodity',
                 'commodity_type': commodity_type,
-                'current_price': round(hist['Close'].iloc[-1], 2),
+                'current_price': round(float(hist['Close'].iloc[-1]), 2),
                 'technical': technical,
                 'seasonal_pattern': seasonal_pattern,
                 'insight': insight,
@@ -220,9 +220,9 @@ class MultiAssetAnalyzer:
             return {
                 'asset': symbol,
                 'asset_class': 'crypto',
-                'current_price': round(hist['Close'].iloc[-1], 2),
+                'current_price': round(float(hist['Close'].iloc[-1]), 2),
                 'technical': technical,
-                'volatility': round(volatility, 2),
+                'volatility': round(float(volatility), 2),
                 'on_chain': on_chain,
                 'insight': insight,
                 'strategic_consideration': self._get_crypto_strategy(technical, volatility)
@@ -252,7 +252,7 @@ class MultiAssetAnalyzer:
                 'asset': symbol,
                 'asset_class': 'forex',
                 'pair': pair,
-                'current_rate': round(hist['Close'].iloc[-1], 4),
+                'current_rate': round(float(hist['Close'].iloc[-1]), 4),
                 'technical': technical,
                 'rate_differential': rate_differential,
                 'insight': insight,
@@ -266,19 +266,19 @@ class MultiAssetAnalyzer:
         if len(hist) < 50:
             return {'error': 'Insufficient data'}
         
-        current = hist['Close'].iloc[-1]
+        current = float(hist['Close'].iloc[-1])
         
         # Moving averages
-        sma_20 = hist['Close'].rolling(20).mean().iloc[-1]
-        sma_50 = hist['Close'].rolling(50).mean().iloc[-1]
-        sma_200 = hist['Close'].rolling(200).mean().iloc[-1]
+        sma_20 = float(hist['Close'].rolling(20).mean().iloc[-1])
+        sma_50 = float(hist['Close'].rolling(50).mean().iloc[-1])
+        sma_200 = float(hist['Close'].rolling(200).mean().iloc[-1])
         
         # RSI
         delta = hist['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
         rs = gain / loss
-        rsi = 100 - (100 / (1 + rs.iloc[-1]))
+        rsi = float(100 - (100 / (1 + rs.iloc[-1])))
         
         # Trend
         if current > sma_20 > sma_50 > sma_200:
@@ -293,7 +293,7 @@ class MultiAssetAnalyzer:
             trend = 'sideways'
         
         # Momentum
-        momentum_20 = (current / hist['Close'].iloc[-21] - 1) * 100 if len(hist) > 20 else 0
+        momentum_20 = float((current / hist['Close'].iloc[-21] - 1) * 100) if len(hist) > 20 else 0.0
         if momentum_20 > 5:
             momentum = 'strong'
         elif momentum_20 > 2:

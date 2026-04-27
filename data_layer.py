@@ -368,8 +368,8 @@ class DataLayer:
                 hist = ticker.history(period="1mo")
                 if not hist.empty:
                     data[name] = {
-                        'current': hist['Close'].iloc[-1],
-                        'change_1m': (hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100
+                        'current': float(hist['Close'].iloc[-1]),
+                        'change_1m': float((hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1) * 100)
                     }
             except:
                 continue

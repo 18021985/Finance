@@ -100,9 +100,9 @@ class MacroAnalyzer:
             try:
                 data = yf.Ticker(ticker).history(period="3mo")
                 if not data.empty:
-                    current = data['Close'].iloc[-1]
-                    change_1m = (data['Close'].iloc[-1] / data['Close'].iloc[-21] - 1) * 100 if len(data) > 20 else 0
-                    change_3m = (data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100 if len(data) > 0 else 0
+                    current = float(data['Close'].iloc[-1])
+                    change_1m = float((data['Close'].iloc[-1] / data['Close'].iloc[-21] - 1) * 100) if len(data) > 20 else 0.0
+                    change_3m = float((data['Close'].iloc[-1] / data['Close'].iloc[0] - 1) * 100) if len(data) > 0 else 0.0
                     
                     trend = 'rising' if change_3m > 0.5 else 'falling' if change_3m < -0.5 else 'stable'
                     
