@@ -85,8 +85,8 @@ class ITickAPIProvider:
             if data and not data.get('error') and len(data) > 0:
                 latest = data[0]
                 return {
-                    'lastPrice': latest.get('c'),
-                    'pChange': 0,  # Need previous close to calculate
+                    'lastPrice': float(latest.get('c', 0) or 0),
+                    'pChange': 0.0,  # Need previous close to calculate
                     'timestamp': latest.get('t')
                 }
             return {"error": "NIFTY 50 not found"}
@@ -101,11 +101,11 @@ class ITickAPIProvider:
             if data and not data.get('error') and len(data) > 0:
                 latest = data[0]
                 return {
-                    'lastPrice': latest.get('c'),
-                    'high': latest.get('h'),
-                    'low': latest.get('l'),
-                    'open': latest.get('o'),
-                    'volume': latest.get('v'),
+                    'lastPrice': float(latest.get('c', 0) or 0),
+                    'high': float(latest.get('h', 0) or 0),
+                    'low': float(latest.get('l', 0) or 0),
+                    'open': float(latest.get('o', 0) or 0),
+                    'volume': float(latest.get('v', 0) or 0),
                     'timestamp': latest.get('t')
                 }
             return {"error": "No data available"}

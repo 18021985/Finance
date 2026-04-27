@@ -460,6 +460,7 @@ class IndianMarketAnalyzer:
         """
         Convert pandas/numpy scalars to native Python types and remove NaN/inf
         so FastAPI JSON serialization doesn't 500.
+        Also converts string numbers to floats for frontend compatibility.
         """
         # Pandas / numpy scalars
         try:
@@ -474,7 +475,16 @@ class IndianMarketAnalyzer:
 
         if isinstance(obj, float):
             return None if (math.isnan(obj) or math.isinf(obj)) else obj
-        if isinstance(obj, (int, str, bool)) or obj is None:
+        if isinstance(obj, int):
+            return obj
+        if isinstance(obj, str):
+            # Try to convert string numbers to float
+            try:
+                v = float(obj)
+                return None if (math.isnan(v) or math.isinf(v)) else v
+            except (ValueError, TypeError):
+                return obj
+        if isinstance(obj, bool) or obj is None:
             return obj
         if isinstance(obj, dict):
             return {k: self._to_json_safe(v) for k, v in obj.items()}
