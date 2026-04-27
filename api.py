@@ -1356,8 +1356,10 @@ async def get_indian_market():
     """
     try:
         result = analyzer.indian_analyzer.get_indian_market_overview()
+        logger.info(f"Indian market result: {result}")
         return _json_safe(result)
     except Exception as e:
+        logger.error(f"Error in Indian market endpoint: {e}")
         # Return default Indian market data on error instead of 500
         return _json_safe({
             'indices': {

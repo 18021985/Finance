@@ -48,9 +48,9 @@ class IndianMarketAnalyzer:
         from config import config
         self.itick_api = ITickAPIProvider(config.ITICK_API_KEY) if ITICK_API_AVAILABLE and config.ITICK_API_KEY else None
         
-        # Initialize Indian API provider (indianapi.in) - requires API key
+        # Initialize Indian API provider (indianapi.in) - works with or without API key
         from config import config
-        self.indian_api = IndianAPIProvider(config.INDIAN_API_KEY) if INDIAN_API_AVAILABLE and config.INDIAN_API_KEY else None
+        self.indian_api = IndianAPIProvider(config.INDIAN_API_KEY) if INDIAN_API_AVAILABLE else None
         
         # Use only NIFTY 50 as it's the most reliable index
         self.nse_indices = {
