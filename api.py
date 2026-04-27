@@ -196,6 +196,7 @@ def _json_safe(obj):
     """
     Ensure responses are JSON-serializable and do not contain NaN/Infinity,
     which can cause FastAPI/Starlette to raise during serialization.
+    Also converts string numbers to floats for frontend compatibility.
     """
     try:
         import numpy as np
@@ -209,7 +210,16 @@ def _json_safe(obj):
 
     if isinstance(obj, float):
         return None if (math.isnan(obj) or math.isinf(obj)) else obj
-    if isinstance(obj, (str, int, bool)) or obj is None:
+    if isinstance(obj, int):
+        return obj
+    if isinstance(obj, str):
+        # Try to convert string numbers to float
+        try:
+            v = float(obj)
+            return None if (math.isnan(v) or math.isinf(v)) else v
+        except (ValueError, TypeError):
+            return obj
+    if isinstance(obj, bool) or obj is None:
         return obj
     if isinstance(obj, dict):
         return {k: _json_safe(v) for k, v in obj.items()}
@@ -477,7 +487,7 @@ async def analyze_indian_stock(symbol: str):
         result = analyzer.analyze_indian_stock(symbol)
         if 'error' in result:
             raise HTTPException(status_code=500, detail=result['error'])
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -488,7 +498,7 @@ async def indian_market_overview():
     """Get Indian market overview (NSE/BSE indices and sectors)"""
     try:
         overview = analyzer.get_indian_market_overview()
-        return overview
+        return _json_safe(overview)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -497,7 +507,7 @@ async def scan_indian_opportunities():
     """Scan Indian stocks for investment opportunities"""
     try:
         opportunities = analyzer.indian_analyzer.scan_indian_opportunities()
-        return opportunities
+        return _json_safe(opportunities)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -506,7 +516,7 @@ async def sector_rotation(market: str = Query("US", description="Market: US or I
     """Analyze sector rotation and identify opportunities"""
     try:
         rotation = analyzer.analyze_sector_rotation(market)
-        return rotation
+        return _json_safe(rotation)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -515,7 +525,7 @@ async def sector_recommendations(market: str = Query("US", description="Market: 
     """Get sector allocation recommendations"""
     try:
         recommendations = analyzer.get_sector_recommendations(market)
-        return recommendations
+        return _json_safe(recommendations)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -538,7 +548,7 @@ async def optimize_portfolio(request: dict):
             raise HTTPException(status_code=400, detail="holdings and expected_returns are required")
         
         result = analyzer.optimize_portfolio(holdings, expected_returns)
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
@@ -551,7 +561,7 @@ async def backtest_strategy(symbol: str, period: str = Query("1y", description="
         result = analyzer.backtest_strategy(symbol, period)
         if 'error' in result:
             raise HTTPException(status_code=500, detail=result['error'])
-        return result
+        return _json_safe(result)
     except HTTPException:
         raise
     except Exception as e:
