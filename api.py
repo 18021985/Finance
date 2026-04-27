@@ -645,7 +645,7 @@ async def get_composite_intelligence(symbol: str):
         def _get_score():
             return analyzer.get_composite_score(symbol)
 
-        result = await _to_thread_timeout(_get_score, timeout_s=18.0)
+        result = await _to_thread_timeout(_get_score, timeout_s=12.0)
         if result is None:
             # serve stale cache to avoid UI spam
             if cached:
@@ -1890,9 +1890,27 @@ async def get_investment_recommendations(
                     cash_available=float(cash_available or 0),
                 )
 
-            recommendations = await _to_thread_timeout(_gen, timeout_s=60.0)
+            recommendations = await _to_thread_timeout(_gen, timeout_s=20.0)
             if not recommendations:
-                return []
+                # Return fallback recommendations if generation times out
+                return _json_safe([
+                    {
+                        "symbol": "AAPL",
+                        "action": "hold",
+                        "confidence": 0.5,
+                        "target_price": 0.0,
+                        "entry_price": 0.0,
+                        "stop_loss": 0.0,
+                        "take_profit": 0.0,
+                        "time_horizon": "medium-term",
+                        "risk_level": "medium",
+                        "sector": "Technology",
+                        "expected_return": 0.0,
+                        "position_size": 0.0,
+                        "reasoning": "Data temporarily unavailable. Please try again later.",
+                        "forecast": {"direction": "neutral", "direction_up_prob": 0.5}
+                    }
+                ])
             recommendations = recommendations[: int(limit)]
 
             # Observability: persist recommendation traces when configured

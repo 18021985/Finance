@@ -108,7 +108,7 @@ class DataLayer:
             data = self._apply_data_quality_safeguards(data, symbol)
             return data
 
-        result = self._call_with_timeout(_fetch, timeout_s=15.0, fallback=None)
+        result = self._call_with_timeout(_fetch, timeout_s=8.0, fallback=None)
         if result is None:
             raise Exception(f"Timeout fetching stock data for {symbol}")
         return result
