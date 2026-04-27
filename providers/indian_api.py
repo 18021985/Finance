@@ -31,7 +31,7 @@ class IndianAPIProvider:
             url = f"{self.base_url}/stock"
             params = {'name': name}
             
-            response = self.session.get(url, params=params, timeout=10)
+            response = self.session.get(url, params=params, timeout=3)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -43,7 +43,7 @@ class IndianAPIProvider:
         try:
             url = f"{self.base_url}/trending"
             
-            response = self.session.get(url, timeout=10)
+            response = self.session.get(url, timeout=3)
             response.raise_for_status()
             return response.json()
         except Exception as e:
