@@ -165,7 +165,7 @@ class Backtester:
         
         # Close final position if still open
         if position == 1:
-            final_price = aligned_data['Close'].iloc[-1]
+            final_price = float(aligned_data['Close'].iloc[-1]) if not aligned_data.empty else 0
             capital = holdings * final_price
             trades[-1]['exit_price'] = final_price
             trades[-1]['exit_date'] = aligned_data.index[-1]
@@ -177,8 +177,8 @@ class Backtester:
         equity_curve = pd.Series(equity_curve)
         returns = equity_curve.pct_change().dropna()
         
-        total_return = (equity_curve.iloc[-1] / initial_capital - 1) * 100
-        annualized_return = (equity_curve.iloc[-1] / initial_capital) ** (252 / len(equity_curve)) - 1
+        total_return = float((equity_curve.iloc[-1] / initial_capital - 1) * 100) if not equity_curve.empty else 0.0
+        annualized_return = float((equity_curve.iloc[-1] / initial_capital) ** (252 / len(equity_curve)) - 1) if not equity_curve.empty else 0.0
         
         # Max drawdown
         rolling_max = equity_curve.expanding().max()
@@ -233,14 +233,14 @@ class Backtester:
         if data.empty:
             return {'error': 'Insufficient data'}
         
-        initial_price = data['Close'].iloc[0]
-        final_price = data['Close'].iloc[-1]
+        initial_price = float(data['Close'].iloc[0]) if not data.empty else 0
+        final_price = float(data['Close'].iloc[-1]) if not data.empty else 0
         
-        shares = initial_capital / initial_price
+        shares = initial_capital / initial_price if initial_price > 0 else 0
         final_value = shares * final_price
         
-        total_return = (final_value / initial_capital - 1) * 100
-        annualized_return = (final_value / initial_capital) ** (252 / len(data)) - 1
+        total_return = float((final_value / initial_capital - 1) * 100)
+        annualized_return = float((final_value / initial_capital) ** (252 / len(data)) - 1) if len(data) > 0 else 0.0
         
         # Calculate max drawdown
         equity = shares * data['Close']

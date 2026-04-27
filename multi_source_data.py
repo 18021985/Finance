@@ -98,7 +98,7 @@ class MultiSourceDataFetcher:
             latest = {}
             for key, series in indicators.items():
                 if not series.empty:
-                    latest[key] = series.iloc[-1]
+                    latest[key] = float(series.iloc[-1])
             
             return latest
         except ImportError:
@@ -117,19 +117,19 @@ class MultiSourceDataFetcher:
             fed_ticker = yf.Ticker('^IRX')
             fed_data = fed_ticker.history(period='1mo')
             if not fed_data.empty:
-                indicators['fed_funds_rate'] = fed_data['Close'].iloc[-1]
+                indicators['fed_funds_rate'] = float(fed_data['Close'].iloc[-1])
             
             # 10Y Treasury
             treasury_ticker = yf.Ticker('^TNX')
             treasury_data = treasury_ticker.history(period='1mo')
             if not treasury_data.empty:
-                indicators['10y_treasury'] = treasury_data['Close'].iloc[-1]
+                indicators['10y_treasury'] = float(treasury_data['Close'].iloc[-1])
             
             # VIX
             vix_ticker = yf.Ticker('^VIX')
             vix_data = vix_ticker.history(period='1mo')
             if not vix_data.empty:
-                indicators['vix'] = vix_data['Close'].iloc[-1]
+                indicators['vix'] = float(vix_data['Close'].iloc[-1])
                 
         except Exception as e:
             print(f"Yahoo macro data error: {e}")

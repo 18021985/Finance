@@ -64,9 +64,9 @@ class MomentumPredictor:
     def _analyze_roc(self, df: pd.DataFrame, current_price: float) -> MomentumSignal:
         """Analyze Rate of Change for momentum"""
         # Calculate ROC for different periods
-        roc_5 = (df['Close'].iloc[-1] / df['Close'].iloc[-6] - 1) * 100 if len(df) > 5 else 0
-        roc_10 = (df['Close'].iloc[-1] / df['Close'].iloc[-11] - 1) * 100 if len(df) > 10 else 0
-        roc_20 = (df['Close'].iloc[-1] / df['Close'].iloc[-21] - 1) * 100 if len(df) > 20 else 0
+        roc_5 = float((df['Close'].iloc[-1] / df['Close'].iloc[-6] - 1) * 100) if len(df) > 5 else 0.0
+        roc_10 = float((df['Close'].iloc[-1] / df['Close'].iloc[-11] - 1) * 100) if len(df) > 10 else 0.0
+        roc_20 = float((df['Close'].iloc[-1] / df['Close'].iloc[-21] - 1) * 100) if len(df) > 20 else 0.0
         
         # Weight recent ROC more heavily
         weighted_roc = (roc_5 * 0.5 + roc_10 * 0.3 + roc_20 * 0.2)
@@ -100,11 +100,11 @@ class MomentumPredictor:
     def _analyze_momentum_oscillator(self, df: pd.DataFrame) -> MomentumSignal:
         """Analyze momentum oscillator"""
         # Simple momentum: current price - N periods ago
-        momentum_10 = df['Close'].iloc[-1] - df['Close'].iloc[-11] if len(df) > 10 else 0
-        momentum_20 = df['Close'].iloc[-1] - df['Close'].iloc[-21] if len(df) > 20 else 0
+        momentum_10 = float(df['Close'].iloc[-1] - df['Close'].iloc[-11]) if len(df) > 10 else 0.0
+        momentum_20 = float(df['Close'].iloc[-1] - df['Close'].iloc[-21]) if len(df) > 20 else 0.0
         
         # Normalize by price
-        normalized_momentum = ((momentum_10 + momentum_20) / 2) / df['Close'].iloc[-1] * 100
+        normalized_momentum = float(((momentum_10 + momentum_20) / 2) / df['Close'].iloc[-1] * 100) if not df.empty else 0.0
         
         if normalized_momentum > 2:
             direction = 'bullish'
@@ -184,7 +184,7 @@ class MomentumPredictor:
         volume_ratio = recent_volume / avg_volume if avg_volume > 0 else 1
         
         # Price change during high volume
-        price_change = (df['Close'].iloc[-1] / df['Close'].iloc[-6] - 1) * 100 if len(df) > 5 else 0
+        price_change = float((df['Close'].iloc[-1] / df['Close'].iloc[-6] - 1) * 100) if len(df) > 5 else 0.0
         
         if volume_ratio > 1.5 and price_change > 0:
             direction = 'bullish'
@@ -219,7 +219,7 @@ class MomentumPredictor:
         
         # Calculate second derivative (acceleration)
         returns = df['Close'].pct_change().tail(10)
-        velocity = returns.diff().iloc[-1] * 100 if len(returns) > 1 else 0
+        velocity = float(returns.diff().iloc[-1] * 100) if len(returns) > 1 else 0.0
         
         if velocity > 0.5:
             direction = 'bullish'

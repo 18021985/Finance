@@ -266,7 +266,7 @@ class MLBacktester:
         # Compare with buy and hold
         ticker = yf.Ticker(symbol)
         hist = ticker.history(period=period)
-        buy_hold_return = (hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1)
+        buy_hold_return = float((hist['Close'].iloc[-1] / hist['Close'].iloc[0] - 1)) if not hist.empty else 0.0
         
         results['buy_hold'] = {
             'total_return': round(buy_hold_return, 4),

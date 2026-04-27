@@ -497,11 +497,11 @@ class InvestmentRecommender:
                 if hist.empty:
                     return None
 
-                current_price = hist['Close'].iloc[-1]
+                current_price = float(hist['Close'].iloc[-1])
                 return {
                     'current_price': current_price,
-                    'volume': hist['Volume'].iloc[-1],
-                    'change': (current_price - hist['Close'].iloc[0]) / hist['Close'].iloc[0],
+                    'volume': float(hist['Volume'].iloc[-1]),
+                    'change': float((current_price - hist['Close'].iloc[0]) / hist['Close'].iloc[0]),
                     'info': info
                 }
 

@@ -77,46 +77,46 @@ class AutoFeatureEngineer:
         loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
-        features.append(rsi.iloc[-1])
+        features.append(float(rsi.iloc[-1]) if not rsi.empty else 50.0)
         
         # MACD
         ema_12 = hist['Close'].ewm(span=12).mean()
         ema_26 = hist['Close'].ewm(span=26).mean()
         macd = ema_12 - ema_26
-        features.append(macd.iloc[-1])
+        features.append(float(macd.iloc[-1]) if not macd.empty else 0.0)
         
         # Momentum
-        momentum_20d = (hist['Close'].iloc[-1] / hist['Close'].iloc[-21] - 1) * 100
+        momentum_20d = float((hist['Close'].iloc[-1] / hist['Close'].iloc[-21] - 1) * 100) if len(hist) > 20 else 0.0
         features.append(momentum_20d)
         
         # Volume change
         if 'Volume' in hist.columns:
-            volume_change = (hist['Volume'].iloc[-1] / hist['Volume'].iloc[-5:].mean() - 1) * 100
+            volume_change = float((hist['Volume'].iloc[-1] / hist['Volume'].iloc[-5:].mean() - 1) * 100) if len(hist) > 5 else 0.0
         else:
-            volume_change = 0
+            volume_change = 0.0
         features.append(volume_change)
         
         # Price vs SMA50
         sma_50 = hist['Close'].rolling(50).mean()
-        price_vs_sma50 = (hist['Close'].iloc[-1] / sma_50.iloc[-1] - 1) * 100
+        price_vs_sma50 = float((hist['Close'].iloc[-1] / sma_50.iloc[-1] - 1) * 100) if not sma_50.empty else 0.0
         features.append(price_vs_sma50)
         
         # Price vs SMA200
         sma_200 = hist['Close'].rolling(200).mean()
-        price_vs_sma200 = (hist['Close'].iloc[-1] / sma_200.iloc[-1] - 1) * 100
+        price_vs_sma200 = float((hist['Close'].iloc[-1] / sma_200.iloc[-1] - 1) * 100) if not sma_200.empty else 0.0
         features.append(price_vs_sma200)
         
         # Volatility
         returns = hist['Close'].pct_change()
-        volatility = returns.rolling(20).std().iloc[-1] * np.sqrt(252)
+        volatility = float(returns.rolling(20).std().iloc[-1] * np.sqrt(252)) if not returns.empty else 0.0
         features.append(volatility)
         
         # High-low range
-        high_low_range = (hist['High'].iloc[-1] / hist['Low'].iloc[-1] - 1) * 100
+        high_low_range = float((hist['High'].iloc[-1] / hist['Low'].iloc[-1] - 1) * 100) if not hist.empty else 0.0
         features.append(high_low_range)
         
         # Gap
-        gap = (hist['Open'].iloc[-1] / hist['Close'].iloc[-2] - 1) * 100
+        gap = float((hist['Open'].iloc[-1] / hist['Close'].iloc[-2] - 1) * 100) if len(hist) > 2 else 0.0
         features.append(gap)
         
         # Trend strength
@@ -131,7 +131,7 @@ class AutoFeatureEngineer:
         plus_di = 100 * (plus_dm.rolling(14).mean() / tr.rolling(14).mean())
         minus_di = 100 * (minus_dm.rolling(14).mean() / tr.rolling(14).mean())
         dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
-        trend_strength = dx.rolling(14).mean().iloc[-1]
+        trend_strength = float(dx.rolling(14).mean().iloc[-1]) if not dx.empty else 0.0
         features.append(trend_strength)
         
         return np.array(features)
