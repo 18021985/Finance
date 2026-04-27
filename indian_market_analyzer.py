@@ -8,6 +8,14 @@ import time
 
 logger = logging.getLogger(__name__)
 
+# Import NSE API provider as fallback
+try:
+    from providers.nse_api import NSEAPIProvider
+    NSE_API_AVAILABLE = True
+except ImportError:
+    NSE_API_AVAILABLE = False
+    logger.warning("NSE API provider not available")
+
 class IndianMarketAnalyzer:
     """Specialized analyzer for Indian stock market (NSE/BSE)"""
     
@@ -17,6 +25,9 @@ class IndianMarketAnalyzer:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         
+        # Initialize NSE API provider as fallback
+        self.nse_api = NSEAPIProvider() if NSE_API_AVAILABLE else None
+        
         # Use only NIFTY 50 as it's the most reliable index
         self.nse_indices = {
             'NIFTY 50': '^NSEI',
@@ -24,9 +35,9 @@ class IndianMarketAnalyzer:
         
         # Reduce number of stocks to avoid rate limiting
         self.key_stocks = {
-            'Reliance': 'RELIANCE.NS',
-            'TCS': 'TCS.NS',
-            'HDFC Bank': 'HDFCBANK.NS',
+            'Reliance': 'RELIANCE',
+            'TCS': 'TCS',
+            'HDFC Bank': 'HDFCBANK',
         }
 
         # Cache (symbol, period) -> (ts, payload)
@@ -58,8 +69,25 @@ class IndianMarketAnalyzer:
             'vix': None,
         }
         
-        # Fetch major indices
+        # Try NSE API first (more reliable on Render)
+        if self.nse_api:
+            try:
+                nifty_data = self.nse_api.get_nifty_50_data()
+                if nifty_data and not nifty_data.get('error'):
+                    overview['indices']['NIFTY 50'] = {
+                        'current': nifty_data.get('lastPrice', 0),
+                        'change': nifty_data.get('pChange', 0),
+                        'symbol': '^NSEI'
+                    }
+                    logger.info(f"Fetched NIFTY 50 from NSE API: {nifty_data.get('lastPrice')}")
+            except Exception as e:
+                logger.warning(f"NSE API failed, falling back to yfinance: {e}")
+        
+        # Fetch major indices with yfinance as fallback
         for name, symbol in self.nse_indices.items():
+            if name in overview['indices']:
+                continue  # Already fetched from NSE API
+                
             def _fetch_index():
                 ticker = yf.Ticker(symbol)
                 hist = ticker.history(period="1mo", timeout=30)
@@ -82,45 +110,43 @@ class IndianMarketAnalyzer:
                 logger.error(f"Failed to fetch {name}: {e}")
                 continue
         
-        # Fetch India VIX
-        def _fetch_vix():
-            vix_ticker = yf.Ticker('^INDIAVIX')
-            vix_hist = vix_ticker.history(period="1d", timeout=30)
-            if not vix_hist.empty:
-                overview['vix'] = round(vix_hist['Close'].iloc[-1], 2)
-                logger.info(f"Fetched India VIX: {overview['vix']}")
+        # Fetch India VIX (skip for now - not critical)
         
-        try:
-            self._fetch_with_retry(_fetch_vix, max_retries=2, base_delay=0.5)
-        except Exception as e:
-            logger.error(f"Failed to fetch India VIX: {e}")
-        
-        # Calculate total market cap from key stocks (approximate)
-        # Skip ticker.info to avoid 429 rate limiting - estimate from price history
+        # Calculate total market cap from key stocks using NSE API
         total_market_cap = 0
         total_volume = 0
         for name, symbol in self.key_stocks.items():
-            def _fetch_stock():
-                ticker = yf.Ticker(symbol)
-                hist = ticker.history(period="1d", timeout=30)
-                if not hist.empty:
-                    # Estimate market cap as price * volume * 1B (rough approximation)
-                    # This avoids ticker.info which causes 429 errors
-                    price = hist['Close'].iloc[-1]
-                    volume = hist['Volume'].iloc[-1]
-                    # Rough estimate: assume 1B shares outstanding for large caps
-                    estimated_market_cap = price * volume * 1000  # Very rough estimate
-                    return estimated_market_cap, volume
-                return 0, 0
-            
-            try:
-                market_cap, volume = self._fetch_with_retry(_fetch_stock, max_retries=2, base_delay=2)
-                total_market_cap += market_cap
-                total_volume += volume
-                time.sleep(1)  # Add delay between requests
-            except Exception as e:
-                logger.warning(f"Failed to fetch {name} market cap/volume: {e}")
-                continue
+            if self.nse_api:
+                try:
+                    stock_data = self.nse_api.get_stock_quote(symbol)
+                    if stock_data and not stock_data.get('error'):
+                        market_cap = stock_data.get('marketCap', 0)
+                        volume = stock_data.get('totalTradedVolume', 0)
+                        total_market_cap += market_cap
+                        total_volume += volume
+                        logger.info(f"Fetched {name} from NSE API: market_cap={market_cap}")
+                except Exception as e:
+                    logger.warning(f"NSE API failed for {name}: {e}")
+            else:
+                # Fallback to yfinance
+                def _fetch_stock():
+                    ticker = yf.Ticker(symbol + '.NS')
+                    hist = ticker.history(period="1d", timeout=30)
+                    if not hist.empty:
+                        price = hist['Close'].iloc[-1]
+                        volume = hist['Volume'].iloc[-1]
+                        estimated_market_cap = price * volume * 1000
+                        return estimated_market_cap, volume
+                    return 0, 0
+                
+                try:
+                    market_cap, volume = self._fetch_with_retry(_fetch_stock, max_retries=2, base_delay=2)
+                    total_market_cap += market_cap
+                    total_volume += volume
+                    time.sleep(1)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch {name} market cap/volume: {e}")
+                    continue
         
         if total_market_cap > 0:
             overview['market_cap'] = total_market_cap
@@ -128,20 +154,6 @@ class IndianMarketAnalyzer:
         if total_volume > 0:
             overview['volume'] = total_volume
             logger.info(f"Total volume: {total_volume}")
-        
-        # Add sector performance based on sector indices
-        sector_mapping = {
-            'IT': 'NIFTY IT',
-            'Banking': 'NIFTY BANK',
-            'Auto': 'NIFTY AUTO',
-            'Pharma': 'NIFTY PHARMA',
-        }
-        
-        for sector, index_name in sector_mapping.items():
-            if index_name in overview['indices']:
-                overview['sectors'][sector] = {
-                    'change': overview['indices'][index_name]['change']
-                }
         
         # Determine market sentiment
         nifty_change = overview['indices'].get('NIFTY 50', {}).get('change', 0)
@@ -156,11 +168,11 @@ class IndianMarketAnalyzer:
     def analyze_indian_stock(self, symbol: str, period: str = "3mo") -> Dict:
         """
         Analyze an Indian stock (NSE/BSE)
-        Symbol should include .NS suffix for NSE stocks
+        Symbol should be without .NS suffix for NSE API
         """
-        if not symbol.endswith('.NS'):
-            symbol = symbol + '.NS'
-
+        # Remove .NS suffix if present for NSE API
+        clean_symbol = symbol.replace('.NS', '')
+        
         # Cache hit
         try:
             import time
@@ -171,7 +183,74 @@ class IndianMarketAnalyzer:
         except Exception:
             pass
         
+        # Try NSE API first
+        if self.nse_api:
+            try:
+                stock_data = self.nse_api.get_stock_quote(clean_symbol)
+                if stock_data and not stock_data.get('error'):
+                    analysis = {
+                        'symbol': symbol,
+                        'name': stock_data.get('symbol', clean_symbol),
+                        'exchange': 'NSE',
+                        'current_price': stock_data.get('lastPrice', 0),
+                        'currency': 'INR',
+                        
+                        # Price performance
+                        'performance': {
+                            '1d': stock_data.get('pChange', 0),
+                            '1w': 0,  # Not available in NSE API
+                            '1m': 0,
+                            '3m': 0,
+                            '1y': 0,
+                        },
+                        
+                        # Valuation metrics
+                        'valuation': {
+                            'pe_ratio': stock_data.get('pe', None),
+                            'pb_ratio': None,
+                            'ev_ebitda': None,
+                            'market_cap': stock_data.get('marketCap', None),
+                        },
+                        
+                        # Fundamentals
+                        'fundamentals': {
+                            'revenue': None,
+                            'profit_margin': None,
+                            'operating_margin': None,
+                            'return_on_equity': None,
+                            'debt_to_equity': None,
+                            'dividend_yield': None,
+                        },
+                        
+                        # Technical indicators (not available from NSE API)
+                        'technical': {
+                            'rsi': None,
+                            'macd': None,
+                            'bollinger_bands': None,
+                        },
+                        
+                        # Indian market specific
+                        'indian_context': {
+                            'nifty_comparison': None,
+                            'sector_performance': None,
+                        }
+                    }
+                    payload = self._to_json_safe(analysis)
+                    try:
+                        import time
+                        self._cache[(symbol, period)] = (time.time(), payload)
+                    except Exception:
+                        pass
+                    logger.info(f"Fetched {symbol} from NSE API")
+                    return payload
+            except Exception as e:
+                logger.warning(f"NSE API failed for {symbol}, falling back to yfinance: {e}")
+        
+        # Fallback to yfinance
         try:
+            if not symbol.endswith('.NS'):
+                symbol = symbol + '.NS'
+            
             ticker = yf.Ticker(symbol)
             # Avoid ticker.info to prevent 429 rate limiting
             hist = ticker.history(period=period, timeout=30)
