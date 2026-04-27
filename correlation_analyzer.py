@@ -247,9 +247,9 @@ class CorrelationAnalyzer:
             rolling_corr = data1_aligned.rolling(window).corr(data2_aligned)
             
             # Calculate statistics
-            current_corr = rolling_corr.iloc[-1]
-            avg_corr = rolling_corr.mean()
-            std_corr = rolling_corr.std()
+            current_corr = float(rolling_corr.iloc[-1]) if not rolling_corr.empty else 0.0
+            avg_corr = float(rolling_corr.mean()) if not rolling_corr.empty else 0.0
+            std_corr = float(rolling_corr.std()) if not rolling_corr.empty else 0.0
             
             # Detect regime changes
             regime_changes = self._detect_regime_changes(rolling_corr)

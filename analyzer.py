@@ -246,7 +246,7 @@ class FinancialIntelligenceSystem:
                 regime = {"volatility_regime": "medium", "trend_regime": "neutral", "correlation_regime": None}
 
             try:
-                last_price = float(company_info.get("current_price") or fundamentals.get("current_price") or 0) or float(stock_data["Close"].iloc[-1])
+                last_price = float(company_info.get("current_price") or fundamentals.get("current_price") or 0) or float(stock_data["Close"].iloc[-1]) if not stock_data.empty else 0
                 # Use composite-ish score proxy: rescale adjusted_net_score into 0..100 band around 50
                 adj = float(scores.get("adjusted_net_score", scores.get("net_score", 0)))
                 score_proxy = max(0.0, min(100.0, 50.0 + adj))

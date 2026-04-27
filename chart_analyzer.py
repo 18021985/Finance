@@ -39,7 +39,7 @@ class ChartAnalyzer:
         
         analysis = {
             'symbol': symbol,
-            'current_price': df['Close'].iloc[-1],
+            'current_price': float(df['Close'].iloc[-1]) if not df.empty else 0,
             'price_action': self._analyze_price_action(df),
             'support_resistance': self._find_support_resistance(df),
             'chart_patterns': self._detect_chart_patterns(df),
@@ -66,9 +66,9 @@ class ChartAnalyzer:
         total_days = len(daily_changes)
         
         # Price relative to moving averages
-        current = df['Close'].iloc[-1]
-        sma_20 = df['Close'].rolling(20).mean().iloc[-1]
-        sma_50 = df['Close'].rolling(50).mean().iloc[-1]
+        current = float(df['Close'].iloc[-1]) if not df.empty else 0
+        sma_20 = float(df['Close'].rolling(20).mean().iloc[-1]) if not df.empty else 0
+        sma_50 = float(df['Close'].rolling(50).mean().iloc[-1]) if not df.empty else 0
         
         return {
             'avg_daily_change': round(avg_change, 3),
@@ -130,7 +130,7 @@ class ChartAnalyzer:
                     })
         
         # Sort by strength and proximity to current price
-        current_price = df['Close'].iloc[-1]
+        current_price = float(df['Close'].iloc[-1]) if not df.empty else 0
         levels.sort(key=lambda x: (x['strength'], -abs(x['level'] - current_price)), reverse=True)
         
         return levels[:10]  # Return top 10 levels
@@ -310,11 +310,11 @@ class ChartAnalyzer:
     def _analyze_trend(self, df: pd.DataFrame) -> Dict:
         """Analyze overall trend"""
         # Multiple timeframe trend analysis
-        current = df['Close'].iloc[-1]
+        current = float(df['Close'].iloc[-1]) if not df.empty else 0
         
-        sma_20 = df['Close'].rolling(20).mean().iloc[-1]
-        sma_50 = df['Close'].rolling(50).mean().iloc[-1]
-        sma_200 = df['Close'].rolling(200).mean().iloc[-1]
+        sma_20 = float(df['Close'].rolling(20).mean().iloc[-1]) if not df.empty else 0
+        sma_50 = float(df['Close'].rolling(50).mean().iloc[-1]) if not df.empty else 0
+        sma_200 = float(df['Close'].rolling(200).mean().iloc[-1]) if not df.empty else 0
         
         # Trend based on moving averages
         if current > sma_20 > sma_50 > sma_200:
@@ -369,8 +369,8 @@ class ChartAnalyzer:
         volume_spike = current_volume > avg_volume * 1.5
         
         # Volume divergence
-        price_change = (df['Close'].iloc[-1] / df['Close'].iloc[-5] - 1) * 100
-        volume_change = (df['Volume'].iloc[-1] / df['Volume'].iloc[-5] - 1) * 100
+        price_change = float((df['Close'].iloc[-1] / df['Close'].iloc[-5] - 1) * 100) if len(df) > 5 else 0.0
+        volume_change = float((df['Volume'].iloc[-1] / df['Volume'].iloc[-5] - 1) * 100) if len(df) > 5 else 0.0
         
         divergence = None
         if price_change > 0 and volume_change < 0:
@@ -389,16 +389,16 @@ class ChartAnalyzer:
     
     def _calculate_performance_metrics(self, df: pd.DataFrame) -> Dict:
         """Calculate key performance metrics"""
-        current = df['Close'].iloc[-1]
+        current = float(df['Close'].iloc[-1]) if not df.empty else 0
         
         # Returns over different periods
         returns = {
-            '1d': (current / df['Close'].iloc[-2] - 1) * 100 if len(df) > 1 else 0,
-            '1w': (current / df['Close'].iloc[-6] - 1) * 100 if len(df) > 5 else 0,
-            '1m': (current / df['Close'].iloc[-21] - 1) * 100 if len(df) > 20 else 0,
-            '3m': (current / df['Close'].iloc[-63] - 1) * 100 if len(df) > 62 else 0,
-            '6m': (current / df['Close'].iloc[-126] - 1) * 100 if len(df) > 125 else 0,
-            '1y': (current / df['Close'].iloc[0] - 1) * 100 if len(df) > 0 else 0,
+            '1d': float((current / df['Close'].iloc[-2] - 1) * 100) if len(df) > 1 else 0.0,
+            '1w': float((current / df['Close'].iloc[-6] - 1) * 100) if len(df) > 5 else 0.0,
+            '1m': float((current / df['Close'].iloc[-21] - 1) * 100) if len(df) > 20 else 0.0,
+            '3m': float((current / df['Close'].iloc[-63] - 1) * 100) if len(df) > 62 else 0.0,
+            '6m': float((current / df['Close'].iloc[-126] - 1) * 100) if len(df) > 125 else 0.0,
+            '1y': float((current / df['Close'].iloc[0] - 1) * 100) if len(df) > 0 else 0.0,
         }
         
         # Max drawdown

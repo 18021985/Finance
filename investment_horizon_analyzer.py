@@ -99,7 +99,7 @@ class InvestmentHorizonAnalyzer:
     def _momentum_opportunity(self, symbol: str, stock_data: pd.DataFrame, 
                             technical_indicators: Dict) -> InvestmentOpportunity:
         """Identify momentum-based short-term opportunity"""
-        current_price = stock_data['Close'].iloc[-1]
+        current_price = float(stock_data['Close'].iloc[-1]) if not stock_data.empty else 0
         rsi = technical_indicators.get('rsi', 50)
         macd = technical_indicators.get('macd', 0)
         
@@ -133,7 +133,7 @@ class InvestmentHorizonAnalyzer:
     def _breakout_opportunity(self, symbol: str, stock_data: pd.DataFrame,
                              technical_indicators: Dict) -> InvestmentOpportunity:
         """Identify breakout opportunity"""
-        current_price = stock_data['Close'].iloc[-1]
+        current_price = float(stock_data['Close'].iloc[-1]) if not stock_data.empty else 0
         resistance = technical_indicators.get('recent_high', current_price * 1.05)
         
         # Near resistance with strong volume
@@ -164,7 +164,7 @@ class InvestmentHorizonAnalyzer:
     def _mean_reversion_opportunity(self, symbol: str, stock_data: pd.DataFrame,
                                    technical_indicators: Dict) -> InvestmentOpportunity:
         """Identify mean reversion opportunity"""
-        current_price = stock_data['Close'].iloc[-1]
+        current_price = float(stock_data['Close'].iloc[-1]) if not stock_data.empty else 0
         rsi = technical_indicators.get('rsi', 50)
         sma_50 = technical_indicators.get('sma_50', current_price)
         
