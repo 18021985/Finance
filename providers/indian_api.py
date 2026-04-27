@@ -13,12 +13,17 @@ logger = logging.getLogger(__name__)
 class IndianAPIProvider:
     """Provider for Indian stock market data using indianapi.in"""
     
-    def __init__(self, base_url: str = "https://indianapi.in"):
+    def __init__(self, api_key: str = None, base_url: str = "https://stock.indianapi.in"):
+        self.api_key = api_key
         self.base_url = base_url
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
+        if api_key:
+            self.session.headers.update({
+                'x-api-key': api_key
+            })
     
     def get_stock_data(self, name: str) -> Dict:
         """Get stock data by company name"""
