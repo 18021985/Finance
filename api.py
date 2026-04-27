@@ -438,10 +438,10 @@ async def scan_opportunities(request: ScanRequest):
             raise HTTPException(status_code=400, detail="Maximum 20 symbols per scan")
         
         results = analyzer.scan_opportunities(request.symbols)
-        return {
+        return _json_safe({
             "opportunities": results,
             "total_analyzed": len(results)
-        }
+        })
     except HTTPException:
         raise
     except Exception as e:
@@ -876,7 +876,7 @@ async def delete_holding(holding_id: str):
 
         supabase_client = create_client(supabase_url, supabase_key)
         response = supabase_client.table('user_holdings').delete().eq('id', holding_id).execute()
-        return {'success': True}
+        return _json_safe({'success': True})
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -894,7 +894,7 @@ async def get_portfolio_strategy():
         holdings_response = await get_user_holdings()
 
         if not holdings_response:
-            return {'error': 'No holdings found'}
+            return _json_safe({'error': 'No holdings found'})
 
         # Get market sentiment - route through data_layer for consistency
         market_sentiment = 'neutral'
@@ -1011,18 +1011,18 @@ async def get_portfolio_strategy():
                 print(f"Error analyzing {symbol}: {e}")
                 continue
 
-        return {
+        return _json_safe({
             'market_sentiment': market_sentiment,
             'risk_level': risk_level,
             'short_term_strategy': short_term_strategy,
             'long_term_strategy': long_term_strategy,
             'news_sentiment': news_sentiment,
             'geopolitical_risk': geopolitical_risk
-        }
+        })
 
     except Exception as e:
         # Return default strategy on error instead of 500
-        return {
+        return _json_safe({
             'market_sentiment': 'neutral',
             'risk_level': 'medium',
             'short_term_strategy': [
@@ -1048,7 +1048,7 @@ async def get_portfolio_strategy():
             'news_sentiment': {'AAPL': 'neutral'},
             'geopolitical_risk': {'AAPL': 'medium'},
             'error': str(e)
-        }
+        })
 
 @app.get("/portfolio")
 async def get_portfolio_data():
@@ -1115,16 +1115,16 @@ async def get_portfolio_data():
                 }
             ]
 
-        return {
+        return _json_safe({
             'totalValue': round(total_value, 2),
             'dailyChange': round(portfolio_daily_change, 2),
             'dailyChangePercent': round(portfolio_daily_change_percent, 2),
             'holdings': holdings_data
-        }
+        })
 
     except Exception as e:
         # Return default portfolio data on error instead of 500
-        return {
+        return _json_safe({
             'totalValue': 50000.00,
             'dailyChange': 0.00,
             'dailyChangePercent': 0.00,
@@ -1152,7 +1152,7 @@ async def get_portfolio_data():
                 }
             ],
             'error': str(e)
-        }
+        })
 
 @app.get("/intelligence-feed")
 async def get_intelligence_feed():
@@ -1971,7 +1971,7 @@ async def get_investment_recommendations(
             _recommendations_cache[cache_key] = (_time.time(), result)
             return _json_safe(result)
         else:
-            return {"error": "Investment recommender not available"}
+            return _json_safe({"error": "Investment recommender not available"})
     except Exception as e:
         # Return default recommendations on error instead of 500
         return _json_safe([
@@ -2009,7 +2009,7 @@ async def get_market_opportunities():
             opportunities = await _to_thread_timeout(_opps, timeout_s=3.0)
             return _json_safe(opportunities or [])
         else:
-            return {"error": "Investment recommender not available"}
+            return _json_safe({"error": "Investment recommender not available"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2058,7 +2058,7 @@ async def get_investment_tips():
             tips = await _to_thread_timeout(_tips, timeout_s=3.0)
             return _json_safe(tips or [])
         else:
-            return {"error": "Investment recommender not available"}
+            return _json_safe({"error": "Investment recommender not available"})
     except Exception as e:
         # Return default tips on error instead of 500
         return _json_safe([
@@ -2101,9 +2101,9 @@ async def get_portfolio_allocation(risk_profile: str = 'moderate'):
     try:
         if analyzer.investment_recommender:
             allocation = analyzer.investment_recommender.get_portfolio_allocation(risk_profile)
-            return allocation
+            return _json_safe(allocation)
         else:
-            return {"error": "Investment recommender not available"}
+            return _json_safe({"error": "Investment recommender not available"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
